@@ -1,42 +1,14 @@
 #!/usr/bin/env python3
-"""
-Tool to get NHL team game schedules for this week and next week.
+"""Tool to get NHL team game schedules for next 2 weeks."""
 
-This tool uses the nhl-api-py library to fetch game schedules and count
-how many games each team plays in the next two weeks. This helps identify
-teams with favorable schedules for fantasy hockey pickups.
-
-Example Usage:
-    from tools.get_team_schedule import get_team_schedule
-
-    # Get game counts for the next 2 weeks
-    result = get_team_schedule(weeks=2)
-
-    if result['success']:
-        for team in result['teams']:
-            print(f"{team['name']}: {team['total_games']} games")
-"""
-
-import sys
 from collections import defaultdict
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 from tools.base_tool import BaseTool
+from modules.tool_logger import get_logger
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-try:
-    from modules.logger import AgentLogger
-
-    logger = AgentLogger.get_logger(__name__)
-except ImportError:
-    import logging
-
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 try:
     from nhlpy import NHLClient
@@ -83,29 +55,17 @@ NHL_TEAMS = {
 
 
 def _get_fantasy_week_boundaries(weeks: int = 2) -> tuple:
-    """
-    Get the start and end dates for fantasy weeks (Monday-Sunday).
-
-    Args:
-        weeks: Number of fantasy weeks to include (default 2)
-
-    Returns:
-        Tuple of (start_date, end_date, week1_start, week1_end, week2_start, week2_end, ...)
-    """
+    """Get start/end dates for fantasy weeks (Monday-Sunday)."""
     today = datetime.now()
-
-    # Find the Monday of the current fantasy week (or today if it's Monday)
-    days_since_monday = today.weekday()  # 0 = Monday, 6 = Sunday
+    days_since_monday = today.weekday()
     current_week_monday = today - timedelta(days=days_since_monday)
 
-    # Calculate week boundaries
     week_boundaries = []
     for i in range(weeks):
         week_start = current_week_monday + timedelta(weeks=i)
-        week_end = week_start + timedelta(days=6)  # Sunday
+        week_end = week_start + timedelta(days=6)
         week_boundaries.append((week_start, week_end))
 
-    # Overall range
     start_date = week_boundaries[0][0]
     end_date = week_boundaries[-1][1]
 
@@ -113,16 +73,7 @@ def _get_fantasy_week_boundaries(weeks: int = 2) -> tuple:
 
 
 def _get_date_range_from_boundaries(start_date: datetime, end_date: datetime) -> list[str]:
-    """
-    Generate a list of dates between start and end dates (inclusive).
-
-    Args:
-        start_date: Start date
-        end_date: End date
-
-    Returns:
-        List of date strings in YYYY-MM-DD format
-    """
+    """Generate list of dates between start and end (YYYY-MM-DD format)."""
     dates = []
     current = start_date
 
@@ -155,39 +106,7 @@ class GetTeamSchedule(BaseTool):
 
     @classmethod
     def run(cls, weeks: int = 2) -> dict[str, Any]:
-        """
-        Get the number of games each NHL team plays over the specified fantasy weeks.
-
-        Fantasy weeks run Monday-Sunday. This function fetches the NHL schedule for
-        complete fantasy weeks and counts how many games each team has scheduled.
-        This is crucial for fantasy hockey because teams with more games provide
-        more opportunities to accumulate points.
-
-        Args:
-            weeks: Number of fantasy weeks to include (default 2)
-
-        Returns:
-            Optimized dictionary structure (minimal tokens):
-            {
-                'weeks': int,
-                'start_date': str,                  # YYYY-MM-DD
-                'end_date': str,                    # YYYY-MM-DD
-                'teams': [
-                    {
-                        'abbr': str,                    # Team abbreviation
-                        'total': int,                   # Total games
-                        'by_week': [int, int, ...],     # Games per week
-                        'games': [
-                            {
-                                'date': str,            # YYYY-MM-DD
-                                'opp': str,             # Opponent abbreviation
-                                'h': bool               # True if home game
-                            }
-                        ]
-                    }
-                ]
-            }
-        """
+        """Get number of games each NHL team plays over specified fantasy weeks (Monday-Sunday)."""
         if not NHL_API_AVAILABLE:
             return {
                 "success": False,

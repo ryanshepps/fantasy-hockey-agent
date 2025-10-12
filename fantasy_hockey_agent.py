@@ -6,6 +6,7 @@ This agent analyzes your fantasy hockey team, compares it to available free agen
 and provides pickup/drop recommendations via email.
 """
 
+import argparse
 import json
 import logging
 import os
@@ -30,11 +31,7 @@ client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 # Model to use
 MODEL = "claude-sonnet-4-20250514"
 
-# Get logger
 logger = AgentLogger.get_logger(__name__)
-
-# Suppress noisy third-party library logs
-# Set yfpy to WARNING level to reduce noise from routine operations
 AgentLogger.set_library_log_level("yfpy", logging.WARNING)
 AgentLogger.set_library_log_level("urllib3", logging.WARNING)
 
@@ -54,11 +51,9 @@ def load_recent_history_for_prompt() -> str:
         else:
             return "\n\nRECENT RECOMMENDATION HISTORY: No previous recommendations found.\n"
     except Exception as e:
-        # If there's an error loading history, continue without it
         return f"\n\nRECENT RECOMMENDATION HISTORY: Unable to load history ({e!s})\n"
 
 
-# System prompt for the agent (cached to reduce token costs)
 def get_system_prompt() -> str:
     """
     Generate the system prompt with recent history included.
@@ -96,19 +91,47 @@ EMAIL STRUCTURE (PLAIN TEXT ONLY - NO HTML):
 SUMMARY | STREAMING STRATEGY (exact dates with game math) | PLAYER CONTEXT | TIMING OPTIMIZATION (stay under 4/week) | ALTERNATIVES | NOTES"""
 
 
-def process_tool_call(tool_name: str, tool_input: dict) -> tuple[dict, float]:
+def process_tool_call(tool_name: str, tool_input: dict, dry_run: bool = False) -> tuple[dict, float]:
     """
     Execute a tool function and return the result with execution time.
 
     Args:
         tool_name: Name of the tool to execute
         tool_input: Input parameters for the tool
+        dry_run: If True, skip execution of send_email and save_recommendations
 
     Returns:
         Tuple of (tool execution result as a dictionary, execution time in ms)
     """
     if tool_name not in TOOL_FUNCTIONS:
         return {"error": f"Unknown tool: {tool_name}"}, 0.0
+
+    # In dry-run mode, skip send_email and save_recommendations
+    if dry_run and tool_name in ["send_email", "save_recommendations"]:
+        logger.info(f"DRY-RUN: Skipping '{tool_name}' execution")
+
+        if tool_name == "send_email":
+            subject = tool_input.get("subject", "")
+            body = tool_input.get("body", "")
+            logger.info(f"DRY-RUN: Would send email with subject: {subject}")
+            logger.info(f"DRY-RUN: Email body ({len(body)} chars):")
+            logger.info("=" * 80)
+            logger.info(body)
+            logger.info("=" * 80)
+            return {
+                "success": True,
+                "message": f"DRY-RUN: Email would be sent (subject: {subject})",
+                "dry_run": True,
+            }, 0.0
+
+        elif tool_name == "save_recommendations":
+            subject = tool_input.get("subject", "")
+            logger.info(f"DRY-RUN: Would save recommendation with subject: {subject}")
+            return {
+                "success": True,
+                "message": "DRY-RUN: Recommendations would be saved to history",
+                "dry_run": True,
+            }, 0.0
 
     try:
         start_time = time.time()
@@ -122,35 +145,28 @@ def process_tool_call(tool_name: str, tool_input: dict) -> tuple[dict, float]:
         return {"error": str(e)}, 0.0
 
 
-def run_agent(prompt: str, verbose: bool = True) -> str:
+def run_agent(prompt: str, verbose: bool = True, dry_run: bool = False) -> str:
     """
     Run the fantasy hockey agent with the given prompt.
 
     Args:
         prompt: Initial prompt for the agent
         verbose: Print conversation details
+        dry_run: If True, skip sending emails and saving recommendations
 
     Returns:
         Final response from Claude
     """
     messages = [{"role": "user", "content": prompt}]
-
+    mode = "DRY-RUN MODE" if dry_run else ""
     if verbose:
-        logger.info("=" * 80)
-        logger.info("Starting Fantasy Hockey Agent")
-        logger.info("=" * 80)
+        logger.info(f"Starting Fantasy Hockey Agent {mode}".strip())
 
-    # Load the system prompt with recent history
     system_prompt_text = get_system_prompt()
-
-    # Add cache control to the last tool for prompt caching optimization
-    # This caches the entire tools array, saving ~1,500 tokens per request after the first
     cached_tools = TOOLS[:-1] + [{**TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
 
-    # Agent loop - continue until Claude stops requesting tools
     api_call_count = 0
     while True:
-        # Call Claude with tools and prompt caching
         api_call_count += 1
         api_call_start = time.time()
 
@@ -166,7 +182,6 @@ def run_agent(prompt: str, verbose: bool = True) -> str:
 
         api_call_time_ms = (time.time() - api_call_start) * 1000
 
-        # Log token usage
         if hasattr(response, "usage"):
             usage = response.usage
             AgentLogger.log_token_usage(
@@ -179,32 +194,15 @@ def run_agent(prompt: str, verbose: bool = True) -> str:
             )
 
         if verbose:
-            logger.info("Claude's response:")
             logger.info(f"Stop reason: {response.stop_reason}")
-            if hasattr(response, "usage"):
-                usage = response.usage
-                token_msg = f"Token usage: input={usage.input_tokens}, output={usage.output_tokens}"
-                if (
-                    hasattr(usage, "cache_creation_input_tokens")
-                    and usage.cache_creation_input_tokens
-                ):
-                    token_msg += f", cache_creation={usage.cache_creation_input_tokens}"
-                if hasattr(usage, "cache_read_input_tokens") and usage.cache_read_input_tokens:
-                    token_msg += f", cache_read={usage.cache_read_input_tokens}"
-                logger.info(token_msg)
 
         assistant_content = []
         for block in response.content:
             if block.type == "text":
-                if verbose:
-                    logger.info(f"Text: {block.text}")
                 assistant_content.append(block)
             elif block.type == "tool_use":
                 if verbose:
-                    logger.info(f"Tool use: {block.name}")
-                    input_str = str(block.input)
-                    truncated_input = input_str[:100] + "..." if len(input_str) > 100 else input_str
-                    logger.info(f"Input: {truncated_input}")
+                    logger.info(f"Tool: {block.name}")
                 assistant_content.append(block)
 
         # Add assistant's response to messages
@@ -225,29 +223,15 @@ def run_agent(prompt: str, verbose: bool = True) -> str:
 
             for block in response.content:
                 if block.type == "tool_use":
-                    # Execute the tool and track execution time
-                    tool_result, execution_time_ms = process_tool_call(block.name, block.input)
+                    tool_result, execution_time_ms = process_tool_call(block.name, block.input, dry_run)
 
-                    # Log tool execution with timing
                     AgentLogger.log_token_usage(
                         step=f"tool_{block.name}",
-                        input_tokens=0,  # Tools don't consume tokens directly
+                        input_tokens=0,
                         output_tokens=0,
                         execution_time_ms=execution_time_ms,
                     )
 
-                    if verbose:
-                        logger.info(f"Tool result for {block.name}:")
-                        if "success" in tool_result:
-                            logger.info(f"Success: {tool_result['success']}")
-                            if "total_count" in tool_result:
-                                logger.info(f"Total players: {tool_result['total_count']}")
-                            if "message" in tool_result:
-                                logger.info(f"Message: {tool_result['message']}")
-                        else:
-                            logger.info(json.dumps(tool_result, indent=2)[:500])
-
-                    # Add tool result to messages
                     tool_results.append(
                         {
                             "type": "tool_result",
@@ -274,6 +258,16 @@ def main():
     """
     Main function to run the fantasy hockey agent.
     """
+    parser = argparse.ArgumentParser(
+        description="Fantasy Hockey AI Agent - Analyze your team and get recommendations"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run analysis without sending email or saving recommendations",
+    )
+    args = parser.parse_args()
+
     if not os.getenv("ANTHROPIC_API_KEY"):
         logger.error("ANTHROPIC_API_KEY not found in environment variables")
         logger.error("Please add it to your .env file")
@@ -281,17 +275,14 @@ def main():
 
     prompt = "Please proceed with the analysis and send me the email."
 
-    logger.info("Starting Fantasy Hockey Analysis...")
-    logger.info("This may take a minute as we fetch data from Yahoo Fantasy API...")
+    mode_msg = " (DRY-RUN)" if args.dry_run else ""
+    logger.info(f"Starting Fantasy Hockey Analysis{mode_msg}...")
 
-    result = run_agent(prompt, verbose=True)
+    result = run_agent(prompt, verbose=True, dry_run=args.dry_run)
 
-    logger.info("=" * 80)
-    logger.info("Agent completed!")
-    logger.info("=" * 80)
+    logger.info("Analysis complete!")
     logger.info(result)
 
-    # Print token usage summary
     AgentLogger.print_usage_summary()
 
 

@@ -1,85 +1,21 @@
 #!/usr/bin/env python3
-"""
-Production-ready email utility for sending plain text emails.
-
-This module provides a robust email sending function with retry logic,
-comprehensive error handling, and logging for production use.
-
-Environment Variables:
-    EMAIL_FROM (required): Sender email address
-    EMAIL_TO (required): Recipient email address
-    EMAIL_PASSWORD (required): SMTP password or app-specific password
-    SMTP_SERVER (optional): SMTP server hostname (default: smtp.gmail.com)
-    SMTP_PORT (optional): SMTP server port (default: 587)
-    SMTP_USERNAME (optional): SMTP login username (default: EMAIL_FROM)
-        Useful for services like Mailtrap where username differs from email
-    SMTP_TIMEOUT (optional): Connection timeout in seconds (default: 30)
-    SMTP_RETRY_ATTEMPTS (optional): Number of retry attempts (default: 3)
-    DRY_RUN (optional): If set to 'true', logs email without sending
-
-Text Formatting Guidelines:
-    The body text should be plain text with generous spacing for readability.
-    Markdown-style emphasis is supported and readable across all email clients:
-    - Use *asterisks* for bold/strong emphasis
-    - Use _underscores_ for italic/light emphasis
-    - Separate sections with blank lines
-    - Use multiple paragraphs for detailed reasoning
-
-Example Usage:
-    from tools.send_email import send_email
-
-    subject = "Fantasy Hockey Weekly Analysis"
-    body = '''
-    Hi there!
-
-    Here are this week's pickup recommendations:
-
-    *Connor McDavid* (C, EDM)
-    He's heating up with 8 points in his last 3 games. Edmonton has 4 games
-    this week including matchups against weak defensive teams. His power play
-    usage is back up to 3+ minutes per game, which is crucial in our scoring
-    system where PPP is worth 2 points.
-
-    Consider dropping: _Player Name_ - Cold streak, only 1 game this week.
-    '''
-
-    result = send_email(subject, body)
-    if result['success']:
-        print(f"Email sent: {result['message']}")
-    else:
-        print(f"Failed: {result['error']}")
-"""
+"""Email utility for sending plain text emails with retry logic."""
 
 import os
 import smtplib
-import sys
 import time
 from email.mime.text import MIMEText
 from email.utils import parseaddr
-from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 
 from tools.base_tool import BaseTool
+from modules.tool_logger import get_logger
 
-# Load environment variables
 load_dotenv()
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-try:
-    from modules.logger import AgentLogger
-
-    logger = AgentLogger.get_logger(__name__)
-except ImportError:
-    import logging
-
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Email configuration
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -94,15 +30,7 @@ DRY_RUN = os.getenv("DRY_RUN", "").lower() == "true"
 
 
 def _validate_email_address(email: str) -> bool:
-    """
-    Validate email address format.
-
-    Args:
-        email: Email address to validate
-
-    Returns:
-        True if valid, False otherwise
-    """
+    """Validate email address format."""
     if not email:
         return False
     name, addr = parseaddr(email)
@@ -110,12 +38,7 @@ def _validate_email_address(email: str) -> bool:
 
 
 def _validate_configuration() -> dict[str, Any]:
-    """
-    Validate required environment variables are set.
-
-    Returns:
-        Dictionary with validation result
-    """
+    """Validate required environment variables are set."""
     errors = []
 
     if not EMAIL_FROM:
@@ -166,33 +89,7 @@ class SendEmail(BaseTool):
 
     @classmethod
     def run(cls, subject: str, body: str) -> dict[str, Any]:
-        """
-        Send a plain text email with retry logic and comprehensive error handling.
-
-        This function is production-ready and includes:
-        - Configuration validation
-        - Retry logic with exponential backoff
-        - Connection timeouts
-        - Specific exception handling
-        - Detailed logging
-        - Dry-run mode support
-
-        Args:
-            subject: Email subject line
-            body: Plain text email body with optional markdown-style formatting
-                Use *asterisks* for bold, _underscores_ for italic
-
-        Returns:
-            Dictionary with result:
-                {
-                    'success': bool,
-                    'message': str (on success),
-                    'error': str (on failure),
-                    'smtp_server': str,
-                    'smtp_port': int,
-                    'attempt': int (number of attempts made)
-                }
-        """
+        """Send plain text email with retry logic and error handling."""
         # Validate configuration
         validation = _validate_configuration()
         if not validation["valid"]:
