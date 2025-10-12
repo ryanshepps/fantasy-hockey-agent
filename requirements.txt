@@ -1,0 +1,14 @@
+# Yahoo Fantasy Sports API
+yfpy>=17.0.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# Anthropic Claude API
+anthropic>=0.39.0
+
+# NHL API for team schedules
+nhl-api-py>=1.0.0
+
+# Ruff linter and formatter
+ruff>=0.8.0
