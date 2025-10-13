@@ -15,8 +15,8 @@ import time
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-from modules.logger import AgentLogger
 from fantasy_tools import TOOL_FUNCTIONS, TOOLS
+from modules.logger import AgentLogger
 from tools.get_recommendation_history import (
     format_history_summary,
     get_recommendation_history,
@@ -165,7 +165,7 @@ def run_agent(prompt: str, verbose: bool = True, dry_run: bool = False) -> str:
         logger.info(f"Starting Fantasy Hockey Agent {mode}".strip())
 
     system_prompt_text = get_system_prompt()
-    cached_tools = TOOLS[:-1] + [{**TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
+    cached_tools = [*TOOLS[:-1], {**TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
 
     api_call_count = 0
     while True:

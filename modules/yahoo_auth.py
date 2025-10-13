@@ -13,7 +13,6 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 from yfpy.query import YahooFantasySportsQuery
@@ -33,10 +32,10 @@ logger = AgentLogger.get_logger(__name__)
 
 
 def get_yahoo_query(
-    league_id: str = None,
-    consumer_key: str = None,
-    consumer_secret: str = None,
-    access_token_json: str = None,
+    league_id: str | None = None,
+    consumer_key: str | None = None,
+    consumer_secret: str | None = None,
+    access_token_json: str | None = None,
 ) -> YahooFantasySportsQuery:
     """
     Initialize Yahoo Fantasy Sports Query with robust token handling.
@@ -168,7 +167,7 @@ def _create_query_with_token(
         raise
 
 
-def export_tokens_to_json() -> Optional[str]:
+def export_tokens_to_json() -> str | None:
     """
     Export current token data from .env to JSON format for GitHub secrets.
 

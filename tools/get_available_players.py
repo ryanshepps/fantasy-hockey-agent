@@ -2,23 +2,23 @@
 """Tool to get available free agents."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, ClassVar
 
-from tools.base_tool import BaseTool
 from modules.yahoo_utils import (
+    LEAGUE_ID,
     YAHOO_CLIENT_ID,
     YAHOO_CLIENT_SECRET,
-    LEAGUE_ID,
-    initialize_yahoo_query,
     extract_player_name,
     get_league_context_info,
+    initialize_yahoo_query,
 )
+from tools.base_tool import BaseTool
 
 
 class GetAvailablePlayers(BaseTool):
     """Tool for fetching available free agent players from Yahoo Fantasy Hockey."""
 
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "get_available_players",
         "description": "Get available free agent players from Yahoo Fantasy Hockey league. Returns players categorized by position (forwards, defense, goalies) with their stats including fantasy points. Players are sorted by fantasy points in descending order.",
         "input_schema": {
@@ -40,7 +40,7 @@ class GetAvailablePlayers(BaseTool):
     }
 
     @classmethod
-    def run(cls, count: int = 100, position: str = None) -> dict[str, Any]:
+    def run(cls, count: int = 100, position: str | None = None) -> dict[str, Any]:
         """Get available free agent players from Yahoo Fantasy Hockey."""
         try:
             yahoo_query = initialize_yahoo_query()
@@ -94,9 +94,9 @@ class GetAvailablePlayers(BaseTool):
                         position_value = eligible_positions[0]
 
                 fantasy_points = 0.0
-                if hasattr(player, "player_points") and player.player_points:
-                    if hasattr(player.player_points, "total") and player.player_points.total:
-                        fantasy_points = float(player.player_points.total)
+                if (hasattr(player, "player_points") and player.player_points
+                    and hasattr(player.player_points, "total") and player.player_points.total):
+                    fantasy_points = float(player.player_points.total)
 
                 player_data = {
                     "player_id": player.player_id if hasattr(player, "player_id") else None,

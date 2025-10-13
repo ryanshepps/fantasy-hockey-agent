@@ -2,20 +2,20 @@
 """Tool to get your current fantasy hockey roster."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, ClassVar
 
-from tools.base_tool import BaseTool
 from modules.yahoo_utils import (
+    LEAGUE_ID,
     TEAM_ID,
     YAHOO_CLIENT_ID,
     YAHOO_CLIENT_SECRET,
-    LEAGUE_ID,
-    initialize_yahoo_query,
+    extract_player_fantasy_points,
     extract_player_name,
     extract_player_position_info,
-    extract_player_fantasy_points,
     get_league_context_info,
+    initialize_yahoo_query,
 )
+from tools.base_tool import BaseTool
 
 
 def _convert_roster_to_flat_structure(roster: list) -> list[dict]:
@@ -66,7 +66,7 @@ def _calculate_roster_counts(players: list[dict]) -> dict:
 class GetCurrentRoster(BaseTool):
     """Tool for fetching current fantasy hockey roster."""
 
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "get_current_roster",
         "description": "Get the current roster for a fantasy hockey team. Returns players categorized by position with their stats including fantasy points, status (injured/healthy), and position in lineup.",
         "input_schema": {
@@ -83,7 +83,7 @@ class GetCurrentRoster(BaseTool):
     }
 
     @classmethod
-    def run(cls, team_id: int = None) -> dict[str, Any]:
+    def run(cls, team_id: int | None = None) -> dict[str, Any]:
         """Get the current roster for a team."""
         try:
             yahoo_query = initialize_yahoo_query()

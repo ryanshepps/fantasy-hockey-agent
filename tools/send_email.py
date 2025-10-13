@@ -6,12 +6,12 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 from email.utils import parseaddr
-from typing import Any
+from typing import Any, ClassVar
 
 from dotenv import load_dotenv
 
-from tools.base_tool import BaseTool
 from modules.tool_logger import get_logger
+from tools.base_tool import BaseTool
 
 load_dotenv()
 
@@ -33,7 +33,7 @@ def _validate_email_address(email: str) -> bool:
     """Validate email address format."""
     if not email:
         return False
-    name, addr = parseaddr(email)
+    _name, addr = parseaddr(email)
     return "@" in addr and "." in addr.split("@")[1]
 
 
@@ -71,7 +71,7 @@ class SendEmail(BaseTool):
     """Tool for sending emails with fantasy hockey recommendations."""
 
     # Tool definition for Claude Agent SDK
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "send_email",
         "description": "Send an email with fantasy hockey recommendations. Use plain text with markdown-style formatting (*bold*, _italic_) for readability.",
         "input_schema": {

@@ -9,7 +9,7 @@ suggestions and to track trends over time.
 import json
 import os
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, ClassVar
 
 from tools.base_tool import BaseTool
 
@@ -17,7 +17,7 @@ from tools.base_tool import BaseTool
 class GetRecommendationHistory(BaseTool):
     """Tool for retrieving past sent emails."""
 
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "get_recommendation_history",
         "description": "Retrieve past sent emails from history. Use this to check what was recommended in previous weeks to avoid repeating suggestions and to track player trends over time.",
         "input_schema": {
@@ -38,7 +38,7 @@ class GetRecommendationHistory(BaseTool):
     }
 
     @classmethod
-    def run(cls, weeks_back: int = 4, search_term: str = None) -> dict[str, Any]:
+    def run(cls, weeks_back: int = 4, search_term: str | None = None) -> dict[str, Any]:
         """
         Retrieve email history.
 

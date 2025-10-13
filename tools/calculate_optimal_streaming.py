@@ -23,7 +23,7 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from tools.base_tool import BaseTool
 
@@ -219,7 +219,7 @@ def _calculate_streaming_opportunity(
 
 
 def _assess_player_quality(
-    player: dict, team_schedule: dict = None, current_date: str = None
+    player: dict, team_schedule: dict | None = None, current_date: str | None = None
 ) -> dict:
     """
     Assess player quality to determine if they should be considered droppable.
@@ -405,12 +405,8 @@ def _positions_are_compatible(drop_position: str, pickup_position: str) -> bool:
     Returns:
         True if positions are compatible for streaming
     """
-    # Simplified position matching
-    if drop_position == "G" and pickup_position != "G":
-        return False
-    if drop_position != "G" and pickup_position == "G":
-        return False
-    return True
+    # Simplified position matching - both must be goalies or both must be non-goalies
+    return (drop_position == "G") == (pickup_position == "G")
 
 
 def _build_opportunity_recommendation(
@@ -549,7 +545,7 @@ class CalculateOptimalStreaming(BaseTool):
     """Tool for calculating optimal player streaming opportunities."""
 
     # Tool definition for Claude Agent SDK
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "calculate_optimal_streaming",
         "description": "Calculate optimal player streaming opportunities to maximize total games played over a 2-week period. This tool analyzes your roster, available free agents, and team schedules to recommend EXACT drop/pickup timing. For example: 'Drop Frank Vatrano on Oct 15 after 3 games, pick up Alex Lafreniere who has 4 games remaining = 7 total games vs 4 if you keep Vatrano'. ONLY recommends dropping streamable-tier players (never elite/high-end players). This is the KEY tool for game-maximization strategy.",
         "input_schema": {
