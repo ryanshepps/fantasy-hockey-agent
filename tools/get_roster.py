@@ -138,7 +138,9 @@ def _print_position_group(players: list[dict], position_name: str):
     print(f"{'Name':<30} {'Pos':<5} {'Team':<5} {'Slot':<8} {'Pts':<10} {'Status':<12}")
     print("-" * 80)
     for p in players:
-        print(f"{p['name']:<30} {p['position'] or 'N/A':<5} {p['nhl_team'] or 'N/A':<5} {p['selected_position'] or 'N/A':<8} {p['fantasy_points']:<10.2f} {p['status'] or 'Healthy':<12}")
+        print(
+            f"{p['name']:<30} {p['position'] or 'N/A':<5} {p['nhl_team'] or 'N/A':<5} {p['selected_position'] or 'N/A':<8} {p['fantasy_points']:<10.2f} {p['status'] or 'Healthy':<12}"
+        )
 
 
 def display_roster(roster_data: dict[str, Any]):
@@ -157,11 +159,15 @@ def display_roster(roster_data: dict[str, Any]):
         print(f"League: {data['league_context']['league_name']}")
     print("=" * 80)
 
-    _print_position_group([p for p in players if p["position"] in ["C", "LW", "RW", "F"]], "FORWARDS")
+    _print_position_group(
+        [p for p in players if p["position"] in ["C", "LW", "RW", "F"]], "FORWARDS"
+    )
     _print_position_group([p for p in players if p["position"] == "D"], "DEFENSE")
     _print_position_group([p for p in players if p["position"] == "G"], "GOALIES")
 
-    print(f"\nTotal: {counts['total']} | Active: {counts['active']} | Bench: {counts['bench']} | IR: {counts['injured_reserve']}")
+    print(
+        f"\nTotal: {counts['total']} | Active: {counts['active']} | Bench: {counts['bench']} | IR: {counts['injured_reserve']}"
+    )
 
 
 def main():

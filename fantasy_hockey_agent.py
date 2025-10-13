@@ -91,7 +91,9 @@ EMAIL STRUCTURE (PLAIN TEXT ONLY - NO HTML):
 SUMMARY | STREAMING STRATEGY (exact dates with game math) | PLAYER CONTEXT | TIMING OPTIMIZATION (stay under 4/week) | ALTERNATIVES | NOTES"""
 
 
-def process_tool_call(tool_name: str, tool_input: dict, dry_run: bool = False) -> tuple[dict, float]:
+def process_tool_call(
+    tool_name: str, tool_input: dict, dry_run: bool = False
+) -> tuple[dict, float]:
     """
     Execute a tool function and return the result with execution time.
 
@@ -223,7 +225,9 @@ def run_agent(prompt: str, verbose: bool = True, dry_run: bool = False) -> str:
 
             for block in response.content:
                 if block.type == "tool_use":
-                    tool_result, execution_time_ms = process_tool_call(block.name, block.input, dry_run)
+                    tool_result, execution_time_ms = process_tool_call(
+                        block.name, block.input, dry_run
+                    )
 
                     AgentLogger.log_token_usage(
                         step=f"tool_{block.name}",

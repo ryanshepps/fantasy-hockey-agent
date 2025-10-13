@@ -364,9 +364,7 @@ def _build_droppable_candidates(
             player["quality_assessment"] = quality
             drop_candidates.append(player)
         else:
-            logger.info(
-                f"Skipping {player['name']} - tier: {quality['tier']} (not droppable)"
-            )
+            logger.info(f"Skipping {player['name']} - tier: {quality['tier']} (not droppable)")
 
     return drop_candidates
 
@@ -645,12 +643,11 @@ class CalculateOptimalStreaming(BaseTool):
 
             # Get current date for games played calculation
             from datetime import datetime
+
             current_date = datetime.now().strftime("%Y-%m-%d")
 
             # Build drop and pickup candidate lists
-            drop_candidates = _build_droppable_candidates(
-                roster_data, team_schedule, current_date
-            )
+            drop_candidates = _build_droppable_candidates(roster_data, team_schedule, current_date)
             pickup_candidates = _build_pickup_candidates(
                 available_players, team_schedule, current_date
             )

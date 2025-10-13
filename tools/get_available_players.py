@@ -154,7 +154,9 @@ def _print_fa_position_group(players: list[dict], position_name: str, limit: int
     print(f"{'Name':<30} {'Pos':<5} {'Team':<5} {'Fantasy Pts':<12} {'Status':<12}")
     print("-" * 80)
     for p in players[:limit]:
-        print(f"{p['name']:<30} {p['position'] or 'N/A':<5} {p['nhl_team'] or 'N/A':<5} {p['fantasy_points']:<12.2f} {p['status'] or 'Healthy':<12}")
+        print(
+            f"{p['name']:<30} {p['position'] or 'N/A':<5} {p['nhl_team'] or 'N/A':<5} {p['fantasy_points']:<12.2f} {p['status'] or 'Healthy':<12}"
+        )
 
 
 def display_available_players(data: dict[str, Any], limit: int = 10):
@@ -173,7 +175,9 @@ def display_available_players(data: dict[str, Any], limit: int = 10):
         print(f"League: {result_data['league_context']['league_name']}")
     print("=" * 80)
 
-    _print_fa_position_group([p for p in players if p["position"] in ["C", "LW", "RW", "F"]], "FORWARDS", limit)
+    _print_fa_position_group(
+        [p for p in players if p["position"] in ["C", "LW", "RW", "F"]], "FORWARDS", limit
+    )
     _print_fa_position_group([p for p in players if p["position"] == "D"], "DEFENSE", limit)
     _print_fa_position_group([p for p in players if p["position"] == "G"], "GOALIES", limit)
 
