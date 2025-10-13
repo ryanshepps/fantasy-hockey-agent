@@ -2,20 +2,20 @@
 """Tool to get your current fantasy hockey roster."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, ClassVar
 
-from tools.base_tool import BaseTool
 from modules.yahoo_utils import (
+    LEAGUE_ID,
     TEAM_ID,
     YAHOO_CLIENT_ID,
     YAHOO_CLIENT_SECRET,
-    LEAGUE_ID,
-    initialize_yahoo_query,
+    extract_player_fantasy_points,
     extract_player_name,
     extract_player_position_info,
-    extract_player_fantasy_points,
     get_league_context_info,
+    initialize_yahoo_query,
 )
+from tools.base_tool import BaseTool
 
 
 def _convert_roster_to_flat_structure(roster: list) -> list[dict]:
@@ -66,7 +66,7 @@ def _calculate_roster_counts(players: list[dict]) -> dict:
 class GetCurrentRoster(BaseTool):
     """Tool for fetching current fantasy hockey roster."""
 
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "get_current_roster",
         "description": "Get the current roster for a fantasy hockey team. Returns players categorized by position with their stats including fantasy points, status (injured/healthy), and position in lineup.",
         "input_schema": {
@@ -83,7 +83,7 @@ class GetCurrentRoster(BaseTool):
     }
 
     @classmethod
-    def run(cls, team_id: int = None) -> dict[str, Any]:
+    def run(cls, team_id: int | None = None) -> dict[str, Any]:
         """Get the current roster for a team."""
         try:
             yahoo_query = initialize_yahoo_query()
@@ -138,7 +138,9 @@ def _print_position_group(players: list[dict], position_name: str):
     print(f"{'Name':<30} {'Pos':<5} {'Team':<5} {'Slot':<8} {'Pts':<10} {'Status':<12}")
     print("-" * 80)
     for p in players:
-        print(f"{p['name']:<30} {p['position'] or 'N/A':<5} {p['nhl_team'] or 'N/A':<5} {p['selected_position'] or 'N/A':<8} {p['fantasy_points']:<10.2f} {p['status'] or 'Healthy':<12}")
+        print(
+            f"{p['name']:<30} {p['position'] or 'N/A':<5} {p['nhl_team'] or 'N/A':<5} {p['selected_position'] or 'N/A':<8} {p['fantasy_points']:<10.2f} {p['status'] or 'Healthy':<12}"
+        )
 
 
 def display_roster(roster_data: dict[str, Any]):
@@ -157,11 +159,15 @@ def display_roster(roster_data: dict[str, Any]):
         print(f"League: {data['league_context']['league_name']}")
     print("=" * 80)
 
-    _print_position_group([p for p in players if p["position"] in ["C", "LW", "RW", "F"]], "FORWARDS")
+    _print_position_group(
+        [p for p in players if p["position"] in ["C", "LW", "RW", "F"]], "FORWARDS"
+    )
     _print_position_group([p for p in players if p["position"] == "D"], "DEFENSE")
     _print_position_group([p for p in players if p["position"] == "G"], "GOALIES")
 
-    print(f"\nTotal: {counts['total']} | Active: {counts['active']} | Bench: {counts['bench']} | IR: {counts['injured_reserve']}")
+    print(
+        f"\nTotal: {counts['total']} | Active: {counts['active']} | Bench: {counts['bench']} | IR: {counts['injured_reserve']}"
+    )
 
 
 def main():

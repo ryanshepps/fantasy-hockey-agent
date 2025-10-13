@@ -31,7 +31,7 @@ import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 
 @dataclass
@@ -60,9 +60,9 @@ class AgentLogger:
     """
 
     # Class-level storage for token usage records
-    _usage_records: list[TokenUsageRecord] = []
+    _usage_records: ClassVar[list[TokenUsageRecord]] = []
     _session_start: datetime = datetime.now()
-    _loggers: dict[str, logging.Logger] = {}
+    _loggers: ClassVar[dict[str, logging.Logger]] = {}
 
     # Log file paths
     _log_dir = Path("logs")
@@ -237,7 +237,7 @@ class AgentLogger:
                 stats["execution_time_ms"].append(record.execution_time_ms)
 
         # Calculate averages for execution time
-        for step, stats in step_stats.items():
+        for _step, stats in step_stats.items():
             if stats["execution_time_ms"]:
                 times = stats["execution_time_ms"]
                 stats["avg_execution_time_ms"] = sum(times) / len(times)

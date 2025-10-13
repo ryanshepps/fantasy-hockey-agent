@@ -8,7 +8,7 @@ This tool allows the agent to persist emails sent to users for future reference.
 import json
 import os
 from datetime import datetime
-from typing import Any
+from typing import Any, ClassVar
 
 from tools.base_tool import BaseTool
 
@@ -16,7 +16,7 @@ from tools.base_tool import BaseTool
 class SaveRecommendations(BaseTool):
     """Tool for saving sent emails to history."""
 
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "save_recommendations",
         "description": "Save the sent email to the history file. This should be called AFTER sending the email to persist it for future reference. This allows the agent to remember what it recommended in previous weeks.",
         "input_schema": {

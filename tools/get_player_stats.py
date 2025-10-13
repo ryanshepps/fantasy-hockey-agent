@@ -18,8 +18,7 @@ Example Usage:
 
 import sys
 from pathlib import Path
-
-from typing import Any
+from typing import Any, ClassVar
 
 from tools.base_tool import BaseTool
 
@@ -146,7 +145,7 @@ class GetPlayerStats(BaseTool):
     """Tool for fetching NHL player statistics."""
 
     # Tool definition for Claude Agent SDK
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "get_player_stats",
         "description": "Get detailed season statistics for NHL players to assess their quality and value. This helps determine which players are 'droppable' vs 'must-keep' based on their performance level. Use this to avoid recommending drops of elite players like Cale Makar or Connor McDavid just because they have fewer games in a given week.",
         "input_schema": {

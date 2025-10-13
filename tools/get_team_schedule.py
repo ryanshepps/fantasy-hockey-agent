@@ -3,10 +3,10 @@
 
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, ClassVar
 
-from tools.base_tool import BaseTool
 from modules.tool_logger import get_logger
+from tools.base_tool import BaseTool
 
 logger = get_logger(__name__)
 
@@ -88,7 +88,7 @@ class GetTeamSchedule(BaseTool):
     """Tool for fetching NHL team game schedules."""
 
     # Tool definition for Claude Agent SDK
-    TOOL_DEFINITION = {
+    TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "get_team_schedule",
         "description": "Get the number of games each NHL team plays over the next N fantasy weeks (Monday-Sunday). Returns a token-optimized structure with team abbreviations, game counts by week, and game details (date, opponent, home/away). Essential for weekly fantasy matchups as teams with more games = more points. Aligns to fantasy week boundaries (Monday start). Format: {weeks: int, teams: [{abbr: str, total: int, by_week: [int], games: [{date: str, opp: str, h: bool}]}]}",
         "input_schema": {

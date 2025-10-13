@@ -13,7 +13,6 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 from yfpy.query import YahooFantasySportsQuery
@@ -33,10 +32,10 @@ logger = AgentLogger.get_logger(__name__)
 
 
 def get_yahoo_query(
-    league_id: str = None,
-    consumer_key: str = None,
-    consumer_secret: str = None,
-    access_token_json: str = None,
+    league_id: str | None = None,
+    consumer_key: str | None = None,
+    consumer_secret: str | None = None,
+    access_token_json: str | None = None,
 ) -> YahooFantasySportsQuery:
     """
     Initialize Yahoo Fantasy Sports Query with robust token handling.
@@ -77,10 +76,12 @@ def get_yahoo_query(
         try:
             token_data = json.loads(access_token_json.strip())
 
-            if token_data.get('token_time'):
-                token_age_hours = (datetime.now().timestamp() - token_data['token_time']) / 3600
+            if token_data.get("token_time"):
+                token_age_hours = (datetime.now().timestamp() - token_data["token_time"]) / 3600
                 if token_age_hours > 1:
-                    logger.info(f"Access token expired ({token_age_hours:.1f}h old, will auto-refresh)")
+                    logger.info(
+                        f"Access token expired ({token_age_hours:.1f}h old, will auto-refresh)"
+                    )
 
             return _create_query_with_token(league_id, consumer_key, consumer_secret, token_data)
         except json.JSONDecodeError as e:
@@ -105,7 +106,9 @@ def get_yahoo_query(
         }
         return _create_query_with_token(league_id, consumer_key, consumer_secret, token_data)
 
-    logger.warning("No token data found - starting OAuth flow (requires interactive authentication)")
+    logger.warning(
+        "No token data found - starting OAuth flow (requires interactive authentication)"
+    )
     logger.info("To authenticate for CI/CD:")
     logger.info("  1. Run locally: python fantasy_hockey_agent.py --dry-run")
     logger.info("  2. Complete OAuth flow in browser")
@@ -158,11 +161,13 @@ def _create_query_with_token(
         )
     except Exception as e:
         logger.error(f"Failed to create Yahoo query: {e}")
-        logger.error("Token may be expired or invalid. Re-authenticate locally and update GitHub secrets.")
+        logger.error(
+            "Token may be expired or invalid. Re-authenticate locally and update GitHub secrets."
+        )
         raise
 
 
-def export_tokens_to_json() -> Optional[str]:
+def export_tokens_to_json() -> str | None:
     """
     Export current token data from .env to JSON format for GitHub secrets.
 
