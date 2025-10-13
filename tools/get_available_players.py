@@ -94,8 +94,12 @@ class GetAvailablePlayers(BaseTool):
                         position_value = eligible_positions[0]
 
                 fantasy_points = 0.0
-                if (hasattr(player, "player_points") and player.player_points
-                    and hasattr(player.player_points, "total") and player.player_points.total):
+                if (
+                    hasattr(player, "player_points")
+                    and player.player_points
+                    and hasattr(player.player_points, "total")
+                    and player.player_points.total
+                ):
                     fantasy_points = float(player.player_points.total)
 
                 player_data = {
