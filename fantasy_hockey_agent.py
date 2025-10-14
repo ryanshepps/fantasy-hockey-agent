@@ -17,10 +17,6 @@ from dotenv import load_dotenv
 
 from fantasy_tools import TOOL_FUNCTIONS, TOOLS
 from modules.logger import AgentLogger
-from tools.get_recommendation_history import (
-    format_history_summary,
-    get_recommendation_history,
-)
 
 # Load environment variables
 load_dotenv()
@@ -36,39 +32,17 @@ AgentLogger.set_library_log_level("yfpy", logging.WARNING)
 AgentLogger.set_library_log_level("urllib3", logging.WARNING)
 
 
-def load_recent_history_for_prompt() -> str:
-    """
-    Load recent recommendation history to include in the system prompt.
-
-    Returns:
-        Formatted string of recent recommendations (last 4 weeks for context)
-    """
-    try:
-        history_data = get_recommendation_history(weeks_back=4)
-        if history_data.get("success") and history_data.get("total_entries", 0) > 0:
-            summary = format_history_summary(history_data)
-            return f"\n\nRECENT RECOMMENDATION HISTORY:\n{summary}\n"
-        else:
-            return "\n\nRECENT RECOMMENDATION HISTORY: No previous recommendations found.\n"
-    except Exception as e:
-        return f"\n\nRECENT RECOMMENDATION HISTORY: Unable to load history ({e!s})\n"
-
-
 def get_system_prompt() -> str:
     """
-    Generate the system prompt with recent history included.
+    Generate the system prompt for the fantasy hockey agent.
 
     Returns:
         Complete system prompt string
     """
-    history_context = load_recent_history_for_prompt()
-
-    return f"""You are an expert fantasy hockey analyst for a points-based league.
+    return """You are an expert fantasy hockey analyst for a points-based league.
 
 LEAGUE SCORING: Goals(5), Assists(2), PPP(2-stack), SHG(3), SOG/Hit/Block(0.5) | Goalie: W(6), GA(-3.5), Save(0.5), SO(6)
 ROSTER: 6F, 4D, 1U, 2G, 6Bench, 2IR | Weekly limits: 4 acquisitions, 3 goalie starts minimum
-
-{history_context}
 
 STRATEGY:
 Maximize games played via strategic streaming of LOWER-TIER players only. Use tools: get_current_roster → get_available_players → get_team_schedule → calculate_optimal_streaming. Never drop elite talent (Makar, McDavid, etc.) for schedule reasons. Elite talent > extra games.
@@ -77,17 +51,19 @@ ANALYSIS PRINCIPLES:
 - Avoid small sample overreaction (1-2 weeks)
 - Balance hot streaks vs established value
 - Focus on sustainable opportunity (top-6 F, top-4 D, starting G)
-- Check recommendation history to avoid repetition
+- Check recommendation history for context, but prioritize highest-conviction picks
+- It's fine to repeat recommendations if conviction remains strong, or pivot to better opportunities
 - Verify drop candidates are truly droppable
 
 TASK:
-1. Fetch roster, top 100 free agents, team schedules (2 weeks)
-2. Use calculate_optimal_streaming for recommendations with EXACT dates/math
-3. Contextualize with performance trends, position needs, history check
-4. Send email with recommendations (plain text, no HTML)
-5. Save recommendations using save_recommendations tool
+1. Check recommendation_history for context on recent picks
+2. Fetch roster, top 100 free agents, team schedules (2 weeks)
+3. Use calculate_optimal_streaming for recommendations with EXACT dates/math
+4. Contextualize with performance trends, position needs, and explain continuity or changes from recent history
+5. Send email with recommendations (very simple HTML)
+6. Save recommendations using save_recommendations tool
 
-EMAIL STRUCTURE (PLAIN TEXT ONLY - NO HTML):
+EMAIL STRUCTURE (VERY SIMPLE HTML):
 SUMMARY | STREAMING STRATEGY (exact dates with game math) | PLAYER CONTEXT | TIMING OPTIMIZATION (stay under 4/week) | ALTERNATIVES | NOTES"""
 
 
