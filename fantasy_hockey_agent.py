@@ -70,7 +70,7 @@ ANALYSIS PRINCIPLES:
 TASK:
 1. Check recommendation_history for context on recent picks
 2. Fetch roster, top 100 free agents, team schedules (2 weeks)
-3. Use calculate_optimal_streaming for recommendations with EXACT dates/math
+3. Use calculate_optimal_streaming for recommendations with EXACT dates/math. You MUST recommend an exact date for when to drop/pickup a new player (and what team to pickup from) to maximize the total number of games played in the current week.
 4. Contextualize with performance trends, position needs, and explain continuity or changes from recent history
 5. Send email with recommendations (very simple HTML)
 6. Save recommendations using save_recommendations tool
