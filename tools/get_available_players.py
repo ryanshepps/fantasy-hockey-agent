@@ -167,7 +167,11 @@ class GetAvailablePlayers(BaseTool):
             )
 
             # Filter by position if specified
-            if position is None or (position_enum and position_enum.value == position) or any(p.value == position for p in eligible_positions):
+            if (
+                position is None
+                or (position_enum and position_enum.value == position)
+                or any(p.value == position for p in eligible_positions)
+            ):
                 players.append(player_model)
 
         # Sort by fantasy points (descending)
