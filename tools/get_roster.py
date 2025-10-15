@@ -90,9 +90,7 @@ def _convert_roster_to_players(roster: list) -> list[Player]:
             position=position,
             eligible_positions=eligible_positions,
             selected_position=selected_position,
-            nhl_team=player.editorial_team_abbr
-            if hasattr(player, "editorial_team_abbr")
-            else None,
+            nhl_team=player.editorial_team_abbr if hasattr(player, "editorial_team_abbr") else None,
             fantasy_points=fantasy_points,
             status=status,
             is_injured=is_injured,

@@ -332,7 +332,9 @@ def _build_pickup_candidates(
     return pickup_candidates
 
 
-def _positions_are_compatible(drop_position: PlayerPosition | None, pickup_position: PlayerPosition | None) -> bool:
+def _positions_are_compatible(
+    drop_position: PlayerPosition | None, pickup_position: PlayerPosition | None
+) -> bool:
     """
     Check if two positions are compatible for streaming (simplified matching).
 
@@ -447,7 +449,9 @@ def _find_all_streaming_opportunities(
 
 
 def _create_summary_message(
-    opportunities: list[StreamingOpportunity], drop_candidates_count: int, pickup_candidates_count: int
+    opportunities: list[StreamingOpportunity],
+    drop_candidates_count: int,
+    pickup_candidates_count: int,
 ) -> str:
     """
     Create a human-readable summary of streaming opportunities.
@@ -542,18 +546,14 @@ class CalculateOptimalStreaming(BaseTool):
         schedule_start = schedule.start_date
         schedule_end = schedule.end_date
 
-        logger.info(
-            f"Calculating streaming opportunities for {schedule_start} to {schedule_end}"
-        )
+        logger.info(f"Calculating streaming opportunities for {schedule_start} to {schedule_end}")
 
         # Get current date for games played calculation
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         # Build drop and pickup candidate lists
         drop_candidates = _build_droppable_candidates(roster, schedule, current_date)
-        pickup_candidates = _build_pickup_candidates(
-            available_players, schedule, current_date
-        )
+        pickup_candidates = _build_pickup_candidates(available_players, schedule, current_date)
 
         logger.info(
             f"Found {len(drop_candidates)} droppable players and {len(pickup_candidates)} pickup candidates"

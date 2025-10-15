@@ -58,9 +58,7 @@ class PlayerTier(str, Enum):
 class PlayerQuality(BaseModel):
     """Assessment of player quality and droppability."""
 
-    fantasy_ppg: float = Field(
-        description="Fantasy points per game average", ge=0.0
-    )
+    fantasy_ppg: float = Field(description="Fantasy points per game average", ge=0.0)
     games_played: int = Field(description="Number of games played this season", ge=0)
     tier: PlayerTier = Field(description="Player quality tier")
     droppable: bool = Field(
@@ -81,13 +79,9 @@ class PlayerQuality(BaseModel):
 class Player(BaseModel):
     """Standardized player representation used across all tools."""
 
-    player_id: str | None = Field(
-        default=None, description="Yahoo or NHL player ID"
-    )
+    player_id: str | None = Field(default=None, description="Yahoo or NHL player ID")
     name: str = Field(description="Player's full name")
-    position: PlayerPosition | None = Field(
-        default=None, description="Primary position"
-    )
+    position: PlayerPosition | None = Field(default=None, description="Primary position")
     eligible_positions: list[PlayerPosition] = Field(
         default_factory=list,
         description="All positions player is eligible for",

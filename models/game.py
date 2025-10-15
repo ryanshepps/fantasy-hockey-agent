@@ -12,12 +12,8 @@ class Game(BaseModel):
         description="Game date in YYYY-MM-DD format",
         pattern=r"^\d{4}-\d{2}-\d{2}$",
     )
-    opponent: str = Field(
-        description="Opponent team abbreviation (e.g., 'TOR', 'EDM')"
-    )
-    is_home: bool = Field(
-        description="True if this is a home game, False if away"
-    )
+    opponent: str = Field(description="Opponent team abbreviation (e.g., 'TOR', 'EDM')")
+    is_home: bool = Field(description="True if this is a home game, False if away")
 
     @field_validator("date")
     @classmethod

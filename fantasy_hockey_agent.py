@@ -130,10 +130,11 @@ def process_tool_call(
 
         # Serialize Pydantic models to JSON-compatible dicts
         from pydantic import BaseModel
+
         if isinstance(result, BaseModel):
-            result = result.model_dump(mode='json')
+            result = result.model_dump(mode="json")
         elif isinstance(result, list) and result and isinstance(result[0], BaseModel):
-            result = [item.model_dump(mode='json') for item in result]
+            result = [item.model_dump(mode="json") for item in result]
 
         logger.info(f"Tool '{tool_name}' executed in {execution_time_ms:.2f}ms")
         return result, execution_time_ms

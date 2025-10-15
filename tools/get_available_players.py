@@ -196,15 +196,18 @@ def _print_fa_position_group(players: list[Player], position_name: str, limit: i
         pos_str = p.position.value if p.position else "N/A"
         team_str = p.nhl_team or "N/A"
         status_str = p.status.value if p.status else "Healthy"
-        print(
-            f"{p.name:<30} {pos_str:<5} {team_str:<5} {p.fantasy_points:<12.2f} {status_str:<12}"
-        )
+        print(f"{p.name:<30} {pos_str:<5} {team_str:<5} {p.fantasy_points:<12.2f} {status_str:<12}")
 
 
 def display_available_players(players: list[Player], limit: int = 10):
     """Display available players in a readable format."""
     # Group by position
-    forward_positions = [PlayerPosition.CENTER, PlayerPosition.LEFT_WING, PlayerPosition.RIGHT_WING, PlayerPosition.FORWARD]
+    forward_positions = [
+        PlayerPosition.CENTER,
+        PlayerPosition.LEFT_WING,
+        PlayerPosition.RIGHT_WING,
+        PlayerPosition.FORWARD,
+    ]
     forwards = [p for p in players if p.position in forward_positions]
     defense = [p for p in players if p.position == PlayerPosition.DEFENSE]
     goalies = [p for p in players if p.position == PlayerPosition.GOALIE]

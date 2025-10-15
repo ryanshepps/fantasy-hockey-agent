@@ -78,11 +78,7 @@ class TeamSchedule(BaseModel):
         Returns:
             List of games in the date range
         """
-        return [
-            game
-            for game in self.games
-            if start_date <= game.date <= end_date
-        ]
+        return [game for game in self.games if start_date <= game.date <= end_date]
 
     def games_after_date(self, date: str) -> list[Game]:
         """
