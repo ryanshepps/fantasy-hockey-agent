@@ -1,7 +1,7 @@
 """Player data models."""
 
 from enum import Enum
-from typing import Literal
+from typing import ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -66,7 +66,7 @@ class PlayerQuality(BaseModel):
     )
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "fantasy_ppg": 3.45,
                 "games_played": 12,
@@ -112,7 +112,7 @@ class Player(BaseModel):
     )
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "player_id": "3637",
                 "name": "Connor McDavid",

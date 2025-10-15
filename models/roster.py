@@ -1,6 +1,7 @@
 """Roster data models."""
 
 from datetime import datetime
+from typing import ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -29,7 +30,7 @@ class RosterCounts(BaseModel):
     )
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "total": 16,
                 "forwards": 9,
@@ -66,7 +67,7 @@ class Roster(BaseModel):
     )
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "team_id": "456",
                 "league_context": {

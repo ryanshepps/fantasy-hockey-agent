@@ -15,7 +15,7 @@ __all__ = [
     "Roster",
     "RosterCounts",
     "Schedule",
-    "TeamSchedule",
     "StreamingOpportunity",
     "StreamingRecommendation",
+    "TeamSchedule",
 ]

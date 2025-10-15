@@ -1,5 +1,7 @@
 """Streaming opportunity data models."""
 
+from typing import ClassVar
+
 from pydantic import BaseModel, Field
 
 from models.player import Player
@@ -47,7 +49,7 @@ class StreamingOpportunity(BaseModel):
     )
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "drop_player": {
                     "name": "Frank Vatrano",
@@ -107,7 +109,7 @@ class StreamingRecommendation(BaseModel):
     )
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "opportunities": [],
                 "total_opportunities": 5,

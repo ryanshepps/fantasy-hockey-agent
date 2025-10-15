@@ -1,6 +1,7 @@
 """Schedule data models."""
 
 from datetime import datetime
+from typing import ClassVar
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -55,7 +56,7 @@ class TeamSchedule(BaseModel):
 
     class Config:
         populate_by_name = True
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "abbr": "TOR",
                 "total": 5,
@@ -132,7 +133,7 @@ class Schedule(BaseModel):
             raise ValueError(f"Date must be in YYYY-MM-DD format: {v}") from e
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "weeks": 2,
                 "start_date": "2024-10-14",

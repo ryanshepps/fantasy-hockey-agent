@@ -1,6 +1,7 @@
 """Game and schedule data models."""
 
 from datetime import datetime
+from typing import ClassVar
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -26,7 +27,7 @@ class Game(BaseModel):
             raise ValueError(f"Date must be in YYYY-MM-DD format: {v}") from e
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "date": "2024-10-15",
                 "opponent": "TOR",

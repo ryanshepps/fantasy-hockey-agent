@@ -2,7 +2,6 @@
 """Tool to get available free agents."""
 
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -15,7 +14,6 @@ from modules.yahoo_utils import (
     YAHOO_CLIENT_ID,
     YAHOO_CLIENT_SECRET,
     extract_player_name,
-    get_league_context_info,
     initialize_yahoo_query,
 )
 from tools.base_tool import BaseTool
@@ -169,11 +167,7 @@ class GetAvailablePlayers(BaseTool):
             )
 
             # Filter by position if specified
-            if position is None:
-                players.append(player_model)
-            elif position_enum and position_enum.value == position:
-                players.append(player_model)
-            elif any(p.value == position for p in eligible_positions):
+            if position is None or (position_enum and position_enum.value == position) or any(p.value == position for p in eligible_positions):
                 players.append(player_model)
 
         # Sort by fantasy points (descending)

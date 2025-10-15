@@ -1,5 +1,7 @@
 """League context data models."""
 
+from typing import ClassVar
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -41,7 +43,7 @@ class LeagueContext(BaseModel):
         return v
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar = {
             "example": {
                 "league_id": "12345",
                 "league_key": "nhl.l.12345",
