@@ -69,8 +69,8 @@ ANALYSIS PRINCIPLES:
 
 TASK:
 1. Check recommendation_history for context on recent picks
-2. Fetch roster, top 100 free agents, team schedules (2 weeks)
-3. Use calculate_optimal_streaming for recommendations with EXACT dates/math. You MUST recommend an exact date for when to drop/pickup a new player (and what team to pickup from) to maximize the total number of games played in the current week.
+2. Fetch roster (returns Roster model), top 100 free agents (returns list of Player models), team schedules for 2 weeks (returns Schedule model)
+3. Use calculate_optimal_streaming with the Roster, Player list, and Schedule models for recommendations with EXACT dates/math. You MUST recommend an exact date for when to drop/pickup a new player (and what team to pickup from) to maximize the total number of games played in the current week.
 4. Contextualize with performance trends, position needs, and explain continuity or changes from recent history
 5. Send email with recommendations (very simple HTML)
 6. Save recommendations using save_recommendations tool
@@ -127,6 +127,13 @@ def process_tool_call(
         start_time = time.time()
         result = TOOL_FUNCTIONS[tool_name](**tool_input)
         execution_time_ms = (time.time() - start_time) * 1000
+
+        # Serialize Pydantic models to JSON-compatible dicts
+        from pydantic import BaseModel
+        if isinstance(result, BaseModel):
+            result = result.model_dump(mode='json')
+        elif isinstance(result, list) and result and isinstance(result[0], BaseModel):
+            result = [item.model_dump(mode='json') for item in result]
 
         logger.info(f"Tool '{tool_name}' executed in {execution_time_ms:.2f}ms")
         return result, execution_time_ms

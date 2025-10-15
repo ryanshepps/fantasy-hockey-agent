@@ -13,18 +13,22 @@ Example Usage:
     from tools.calculate_optimal_streaming import calculate_optimal_streaming
 
     result = calculate_optimal_streaming(
-        roster_data=roster_data,
+        roster=roster,
         available_players=available_players,
-        team_schedule=team_schedule
+        schedule=schedule
     )
 """
 
-import json
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
+from models.game import Game
+from models.player import Player, PlayerPosition, PlayerQuality, PlayerTier
+from models.roster import Roster
+from models.schedule import Schedule
+from models.streaming import StreamingOpportunity, StreamingRecommendation
 from tools.base_tool import BaseTool
 
 # Add parent directory to path for imports
@@ -66,85 +70,64 @@ def _normalize_team_abbr(abbr: str) -> str:
     return abbr_map.get(abbr, abbr)
 
 
-def _get_player_team_abbr(player: dict) -> str | None:
+def _get_player_team_abbr(player: Player) -> str | None:
     """
-    Extract team abbreviation from player data.
+    Extract team abbreviation from player model.
 
     Args:
-        player: Player dictionary from roster or available players
+        player: Player model
 
     Returns:
         Normalized team abbreviation or None
     """
-    # Try different possible fields
-    team = (
-        player.get("nhl_team")
-        or player.get("team")
-        or player.get("editorial_team_abbr")
-        or player.get("team_abbr")
-    )
-    if isinstance(team, dict):
-        team = team.get("abbreviation") or team.get("abbr")
-
-    # Normalize the abbreviation to match schedule data
+    team = player.nhl_team
     return _normalize_team_abbr(team) if team else None
 
 
 def _calculate_games_for_player(
-    player: dict,
-    team_schedule: dict,
+    player: Player,
+    schedule: Schedule,
     start_date: str | None = None,
     end_date: str | None = None,
-) -> list[dict]:
+) -> list[Game]:
     """
     Get list of games for a specific player based on their team's schedule.
 
     Args:
-        player: Player dictionary with team information
-        team_schedule: Schedule data from get_team_schedule tool
+        player: Player model with team information
+        schedule: Schedule model from get_team_schedule tool
         start_date: Optional start date filter (YYYY-MM-DD)
         end_date: Optional end date filter (YYYY-MM-DD)
 
     Returns:
-        List of game dictionaries with dates
+        List of Game models
     """
     team_abbr = _get_player_team_abbr(player)
     if not team_abbr:
-        logger.warning(f"Could not determine team for player: {player.get('name')}")
+        logger.warning(f"Could not determine team for player: {player.name}")
         return []
 
     # Find team in schedule data
-    team_data = None
-    for team in team_schedule.get("teams", []):
-        if team["abbr"] == team_abbr:
-            team_data = team
-            break
-
-    if not team_data:
+    team_schedule = schedule.get_team_schedule(team_abbr)
+    if not team_schedule:
         logger.warning(f"Team {team_abbr} not found in schedule data")
         return []
 
-    games = team_data.get("games", [])
-
-    # Filter by date range if provided
-    if start_date or end_date:
-        filtered_games = []
-        for game in games:
-            game_date = game["date"]
-            if start_date and game_date < start_date:
-                continue
-            if end_date and game_date > end_date:
-                continue
-            filtered_games.append(game)
-        games = filtered_games
-
-    return games
+    # Get games (optionally filtered by date range)
+    if start_date and end_date:
+        return team_schedule.games_in_period(start_date, end_date)
+    elif start_date:
+        return [g for g in team_schedule.games if g.date >= start_date]
+    elif end_date:
+        return [g for g in team_schedule.games if g.date <= end_date]
+    else:
+        return team_schedule.games
 
 
 def _calculate_streaming_opportunity(
-    drop_candidate: dict,
-    pickup_candidate: dict,
-    team_schedule: dict,
+    drop_candidate: Player,
+    pickup_candidate: Player,
+    schedule: Schedule,
     schedule_start: str,
     schedule_end: str,
 ) -> dict | None:
@@ -154,16 +137,16 @@ def _calculate_streaming_opportunity(
     Args:
         drop_candidate: Player currently on roster
         pickup_candidate: Available free agent
-        team_schedule: Schedule data
+        schedule: Schedule model
         schedule_start: Start date of schedule period
         schedule_end: End date of schedule period
 
     Returns:
-        Dictionary with streaming recommendation or None if not beneficial
+        Dictionary with timing info or None if not beneficial
     """
     # Get games for both players over entire period
-    drop_games = _calculate_games_for_player(drop_candidate, team_schedule)
-    pickup_games = _calculate_games_for_player(pickup_candidate, team_schedule)
+    drop_games = _calculate_games_for_player(drop_candidate, schedule)
+    pickup_games = _calculate_games_for_player(pickup_candidate, schedule)
 
     if not drop_games or not pickup_games:
         return None
@@ -182,11 +165,11 @@ def _calculate_streaming_opportunity(
 
     # Try each possible drop date (after each drop candidate's game)
     for i, game in enumerate(drop_games):
-        drop_date = game["date"]
+        drop_date = game.date
         games_played_before_drop = i + 1  # Games 0 to i (inclusive)
 
         # Count pickup candidate's games AFTER drop date
-        pickup_games_after_drop = [g for g in pickup_games if g["date"] > drop_date]
+        pickup_games_after_drop = [g for g in pickup_games if g.date > drop_date]
         games_after_pickup = len(pickup_games_after_drop)
 
         total_games = games_played_before_drop + games_after_pickup
@@ -219,36 +202,35 @@ def _calculate_streaming_opportunity(
 
 
 def _assess_player_quality(
-    player: dict, team_schedule: dict | None = None, current_date: str | None = None
-) -> dict:
+    player: Player, schedule: Schedule | None = None, current_date: str | None = None
+) -> PlayerQuality:
     """
     Assess player quality to determine if they should be considered droppable.
 
     Uses fantasy points per game and position to classify players.
 
     Args:
-        player: Player dictionary with stats
-        team_schedule: Schedule data to calculate games played
+        player: Player model with stats
+        schedule: Schedule model to calculate games played
         current_date: Current date string (YYYY-MM-DD) for calculating games played
 
     Returns:
-        Dictionary with quality metrics
+        PlayerQuality model with quality metrics
     """
-    # Extract fantasy points directly from player object
-    fantasy_points = player.get("fantasy_points", 0)
+    # Extract fantasy points from player
+    fantasy_points = player.fantasy_points
 
     # Calculate games played from team schedule
     games_played = 0
-    if team_schedule and current_date:
+    if schedule and current_date:
         team_abbr = _get_player_team_abbr(player)
         if team_abbr:
-            for team in team_schedule.get("teams", []):
-                if team["abbr"] == team_abbr:
-                    # Count games before or on current date
-                    for game in team.get("games", []):
-                        if game["date"] <= current_date:
-                            games_played += 1
-                    break
+            team_schedule = schedule.get_team_schedule(team_abbr)
+            if team_schedule:
+                # Count games before or on current date
+                for game in team_schedule.games:
+                    if game.date <= current_date:
+                        games_played += 1
 
     # If we couldn't calculate games played, estimate 5 (early season default)
     if games_played == 0:
@@ -257,144 +239,100 @@ def _assess_player_quality(
     # Calculate per-game metrics
     fantasy_ppg = fantasy_points / games_played if games_played > 0 else 0
 
-    # Tier classification
-    position = player.get("selected_position") or player.get("position", "F")
+    # Tier classification based on position
+    is_goalie = player.position == PlayerPosition.GOALIE
 
-    if position == "G":
+    if is_goalie:
         # Goalies - different thresholds
         if fantasy_ppg >= 6.0:
-            tier = "Elite"
+            tier = PlayerTier.ELITE
         elif fantasy_ppg >= 4.5:
-            tier = "High-End"
+            tier = PlayerTier.HIGH_END
         elif fantasy_ppg >= 3.0:
-            tier = "Mid-Tier"
+            tier = PlayerTier.MID_TIER
         else:
-            tier = "Streamable"
+            tier = PlayerTier.STREAMABLE
     else:
         # Skaters
         if fantasy_ppg >= 4.5:
-            tier = "Elite"
+            tier = PlayerTier.ELITE
         elif fantasy_ppg >= 3.5:
-            tier = "High-End"
+            tier = PlayerTier.HIGH_END
         elif fantasy_ppg >= 2.5:
-            tier = "Mid-Tier"
+            tier = PlayerTier.MID_TIER
         else:
-            tier = "Streamable"
+            tier = PlayerTier.STREAMABLE
 
     # Only consider streamable/mid-tier players as droppable
-    droppable = tier in ["Streamable", "Mid-Tier"]
+    droppable = tier in [PlayerTier.STREAMABLE, PlayerTier.MID_TIER]
 
-    return {
-        "fantasy_ppg": round(fantasy_ppg, 2),
-        "games_played": games_played,
-        "tier": tier,
-        "droppable": droppable,
-    }
-
-
-def _parse_and_validate_inputs(
-    roster_data: dict, available_players: dict, team_schedule: dict
-) -> dict:
-    """
-    Parse and validate input data from various tools.
-
-    Args:
-        roster_data: Current roster from get_current_roster tool
-        available_players: Available FAs from get_available_players tool
-        team_schedule: Schedule data from get_team_schedule tool
-
-    Returns:
-        Dictionary with parsed data or error information
-    """
-    # Parse team_schedule if it's a JSON string
-    if isinstance(team_schedule, str):
-        try:
-            team_schedule = json.loads(team_schedule)
-        except json.JSONDecodeError as e:
-            return {
-                "success": False,
-                "error": f"Failed to parse team_schedule JSON: {e!s}",
-            }
-
-    # Validate all inputs have required data
-    if (
-        not roster_data.get("success")
-        or not available_players.get("success")
-        or not team_schedule.get("weeks")
-    ):
-        return {
-            "success": False,
-            "error": "One or more input tools failed. Check roster_data, available_players, and team_schedule.",
-        }
-
-    return {
-        "success": True,
-        "team_schedule": team_schedule,
-        "schedule_start": team_schedule["start_date"],
-        "schedule_end": team_schedule["end_date"],
-    }
+    return PlayerQuality(
+        fantasy_ppg=round(fantasy_ppg, 2),
+        games_played=games_played,
+        tier=tier,
+        droppable=droppable,
+    )
 
 
 def _build_droppable_candidates(
-    roster_data: dict, team_schedule: dict, current_date: str
-) -> list[dict]:
+    roster: Roster, schedule: Schedule, current_date: str
+) -> list[Player]:
     """
     Build list of droppable players from roster based on quality assessment.
 
     Args:
-        roster_data: Current roster data
-        team_schedule: Schedule data for games played calculation
+        roster: Current roster model
+        schedule: Schedule model for games played calculation
         current_date: Current date string (YYYY-MM-DD)
 
     Returns:
-        List of player dictionaries with quality assessments
+        List of Player models with quality assessments populated
     """
     drop_candidates = []
-    roster_players = roster_data.get("data", {}).get("players", [])
 
-    for player in roster_players:
+    for player in roster.players:
         # Skip injured/IR players
-        if player.get("status") in ["IR", "O", "DTD"]:
+        if player.is_injured or player.is_on_ir():
             continue
 
         # Assess player quality
-        quality = _assess_player_quality(player, team_schedule, current_date)
+        quality = _assess_player_quality(player, schedule, current_date)
 
-        if quality["droppable"]:
-            player["quality_assessment"] = quality
+        if quality.droppable:
+            # Add quality assessment to player
+            player.quality_assessment = quality
             drop_candidates.append(player)
         else:
-            logger.info(f"Skipping {player['name']} - tier: {quality['tier']} (not droppable)")
+            logger.info(f"Skipping {player.name} - tier: {quality.tier.value} (not droppable)")
 
     return drop_candidates
 
 
 def _build_pickup_candidates(
-    available_players: dict, team_schedule: dict, current_date: str
-) -> list[dict]:
+    available_players: list[Player], schedule: Schedule, current_date: str
+) -> list[Player]:
     """
     Build list of pickup candidates from available players with quality assessment.
 
     Args:
-        available_players: Available free agents data
-        team_schedule: Schedule data for games played calculation
+        available_players: List of available free agent Player models
+        schedule: Schedule model for games played calculation
         current_date: Current date string (YYYY-MM-DD)
 
     Returns:
-        List of player dictionaries with quality assessments
+        List of Player models with quality assessments populated
     """
     pickup_candidates = []
-    avail_players = available_players.get("data", {}).get("players", [])
 
-    for player in avail_players:
-        quality = _assess_player_quality(player, team_schedule, current_date)
-        player["quality_assessment"] = quality
+    for player in available_players:
+        quality = _assess_player_quality(player, schedule, current_date)
+        player.quality_assessment = quality
         pickup_candidates.append(player)
 
     return pickup_candidates
 
 
-def _positions_are_compatible(drop_position: str, pickup_position: str) -> bool:
+def _positions_are_compatible(drop_position: PlayerPosition | None, pickup_position: PlayerPosition | None) -> bool:
     """
     Check if two positions are compatible for streaming (simplified matching).
 
@@ -406,15 +344,17 @@ def _positions_are_compatible(drop_position: str, pickup_position: str) -> bool:
         True if positions are compatible for streaming
     """
     # Simplified position matching - both must be goalies or both must be non-goalies
-    return (drop_position == "G") == (pickup_position == "G")
+    if not drop_position or not pickup_position:
+        return False
+    return (drop_position == PlayerPosition.GOALIE) == (pickup_position == PlayerPosition.GOALIE)
 
 
 def _build_opportunity_recommendation(
-    drop_player: dict,
-    pickup_player: dict,
+    drop_player: Player,
+    pickup_player: Player,
     timing: dict,
-    team_schedule: dict,
-) -> dict:
+    schedule: Schedule,
+) -> StreamingOpportunity:
     """
     Build a formatted recommendation from streaming opportunity data.
 
@@ -422,90 +362,84 @@ def _build_opportunity_recommendation(
         drop_player: Player being dropped
         pickup_player: Player being picked up
         timing: Timing information from _calculate_streaming_opportunity
-        team_schedule: Schedule data for baseline calculation
+        schedule: Schedule model for baseline calculation
 
     Returns:
-        Dictionary with formatted recommendation
+        StreamingOpportunity model
     """
     # Get baseline (keeping drop player)
-    drop_games = _calculate_games_for_player(drop_player, team_schedule)
+    drop_games = _calculate_games_for_player(drop_player, schedule)
     baseline_games = len(drop_games)
 
     # Build reasoning
     if timing["drop_after_game_num"] == 0:
-        drop_timing = f"Drop {drop_player['name']} immediately"
+        drop_timing = f"Drop {drop_player.name} immediately"
     else:
-        drop_timing = f"Drop {drop_player['name']} on {timing['drop_date']} (after {timing['drop_after_game_num']} games played)"
+        drop_timing = f"Drop {drop_player.name} on {timing['drop_date']} (after {timing['drop_after_game_num']} games played)"
 
     next_game_info = ""
+    next_game_date = None
     if timing["next_pickup_game"]:
-        next_game_info = f" First game: {timing['next_pickup_game']['date']} vs {timing['next_pickup_game']['opp']}"
+        next_game = timing["next_pickup_game"]
+        next_game_date = next_game.date
+        next_game_info = f" First game: {next_game.date} vs {next_game.opponent}"
 
     reasoning = (
-        f"{drop_timing}, pick up {pickup_player['name']} "
+        f"{drop_timing}, pick up {pickup_player.name} "
         f"({timing['pickup_games_remaining']} games remaining).{next_game_info} "
         f"Total: {timing['total_games']} games vs {baseline_games} games if kept."
     )
 
-    return {
-        "drop_player": drop_player["name"],
-        "drop_player_tier": drop_player["quality_assessment"]["tier"],
-        "drop_player_fantasy_ppg": drop_player["quality_assessment"]["fantasy_ppg"],
-        "pickup_player": pickup_player["name"],
-        "pickup_player_tier": pickup_player["quality_assessment"]["tier"],
-        "pickup_player_fantasy_ppg": pickup_player["quality_assessment"]["fantasy_ppg"],
-        "drop_date": timing["drop_date"],
-        "drop_after_games": timing["drop_after_game_num"],
-        "pickup_games_remaining": timing["pickup_games_remaining"],
-        "total_games": timing["total_games"],
-        "improvement": timing["improvement"],
-        "baseline_games": baseline_games,
-        "next_pickup_game": timing["next_pickup_game"]["date"]
-        if timing["next_pickup_game"]
-        else None,
-        "reasoning": reasoning,
-    }
+    return StreamingOpportunity(
+        drop_player=drop_player,
+        pickup_player=pickup_player,
+        drop_date=timing["drop_date"],
+        drop_after_games=timing["drop_after_game_num"],
+        pickup_games_remaining=timing["pickup_games_remaining"],
+        total_games=timing["total_games"],
+        improvement=timing["improvement"],
+        baseline_games=baseline_games,
+        next_pickup_game=next_game_date,
+        reasoning=reasoning,
+    )
 
 
 def _find_all_streaming_opportunities(
-    drop_candidates: list[dict],
-    pickup_candidates: list[dict],
-    team_schedule: dict,
+    drop_candidates: list[Player],
+    pickup_candidates: list[Player],
+    schedule: Schedule,
     schedule_start: str,
     schedule_end: str,
-) -> list[dict]:
+) -> list[StreamingOpportunity]:
     """
     Calculate all streaming opportunities between drop and pickup candidates.
 
     Args:
-        drop_candidates: List of droppable players
-        pickup_candidates: List of available pickup players
-        team_schedule: Schedule data
+        drop_candidates: List of droppable Player models
+        pickup_candidates: List of available pickup Player models
+        schedule: Schedule model
         schedule_start: Start date of schedule period
         schedule_end: End date of schedule period
 
     Returns:
-        List of opportunity dictionaries
+        List of StreamingOpportunity models
     """
     opportunities = []
 
     for drop_player in drop_candidates:
         for pickup_player in pickup_candidates:
             # Check position compatibility
-            drop_pos = drop_player.get("selected_position", "F")
-            pickup_pos = pickup_player.get("selected_position", "F")
-
-            if not _positions_are_compatible(drop_pos, pickup_pos):
+            if not _positions_are_compatible(drop_player.position, pickup_player.position):
                 continue
 
             # Calculate streaming timing
             timing = _calculate_streaming_opportunity(
-                drop_player, pickup_player, team_schedule, schedule_start, schedule_end
+                drop_player, pickup_player, schedule, schedule_start, schedule_end
             )
 
             if timing and timing["improvement"] > 0:
                 recommendation = _build_opportunity_recommendation(
-                    drop_player, pickup_player, timing, team_schedule
+                    drop_player, pickup_player, timing, schedule
                 )
                 opportunities.append(recommendation)
 
@@ -513,13 +447,13 @@ def _find_all_streaming_opportunities(
 
 
 def _create_summary_message(
-    opportunities: list[dict], drop_candidates_count: int, pickup_candidates_count: int
+    opportunities: list[StreamingOpportunity], drop_candidates_count: int, pickup_candidates_count: int
 ) -> str:
     """
     Create a human-readable summary of streaming opportunities.
 
     Args:
-        opportunities: List of streaming opportunity recommendations
+        opportunities: List of StreamingOpportunity models
         drop_candidates_count: Number of droppable players analyzed
         pickup_candidates_count: Number of pickup candidates analyzed
 
@@ -530,7 +464,7 @@ def _create_summary_message(
         best = opportunities[0]
         return (
             f"Found {len(opportunities)} streaming opportunities to maximize games played.\n"
-            f"Best opportunity: {best['reasoning']}\n"
+            f"Best opportunity: {best.reasoning}\n"
             f"Total droppable players analyzed: {drop_candidates_count}\n"
             f"Total pickup candidates analyzed: {pickup_candidates_count}"
         )
@@ -551,17 +485,18 @@ class CalculateOptimalStreaming(BaseTool):
         "input_schema": {
             "type": "object",
             "properties": {
-                "roster_data": {
+                "roster": {
                     "type": "object",
-                    "description": "Current roster data from get_current_roster tool",
+                    "description": "Current roster model from get_current_roster tool",
                 },
                 "available_players": {
-                    "type": "object",
-                    "description": "Available free agents from get_available_players tool",
+                    "type": "array",
+                    "description": "List of available free agent Player models from get_available_players tool",
+                    "items": {"type": "object"},
                 },
-                "team_schedule": {
+                "schedule": {
                     "type": "object",
-                    "description": "Team schedule data from get_team_schedule tool",
+                    "description": "Schedule model from get_team_schedule tool",
                 },
                 "max_recommendations": {
                     "type": "integer",
@@ -569,18 +504,18 @@ class CalculateOptimalStreaming(BaseTool):
                     "default": 10,
                 },
             },
-            "required": ["roster_data", "available_players", "team_schedule"],
+            "required": ["roster", "available_players", "schedule"],
         },
     }
 
     @classmethod
     def run(
         cls,
-        roster_data: dict,
-        available_players: dict,
-        team_schedule: dict,
+        roster: Roster,
+        available_players: list[Player],
+        schedule: Schedule,
         max_recommendations: int = 10,
-    ) -> dict[str, Any]:
+    ) -> StreamingRecommendation:
         """
         Calculate optimal player streaming opportunities to maximize games played.
 
@@ -593,101 +528,63 @@ class CalculateOptimalStreaming(BaseTool):
         dropping, even if they have fewer games.
 
         Args:
-            roster_data: Current roster from get_current_roster tool
-            available_players: Available FAs from get_available_players tool
-            team_schedule: Schedule data from get_team_schedule tool
+            roster: Current Roster model from get_current_roster tool
+            available_players: List of Player models from get_available_players tool
+            schedule: Schedule model from get_team_schedule tool
             max_recommendations: Maximum number of recommendations to return
 
         Returns:
-            Dictionary with structure:
-            {
-                'success': bool,
-                'opportunities': [
-                    {
-                        'drop_player': str,
-                        'drop_player_tier': str,
-                        'pickup_player': str,
-                        'pickup_player_tier': str,
-                        'drop_date': str,  # Exact date to drop
-                        'drop_after_games': int,  # Number of games drop player will have played
-                        'pickup_games_remaining': int,  # Games pickup will play after drop
-                        'total_games': int,  # Total games this strategy yields
-                        'improvement': int,  # Extra games vs keeping drop player
-                        'baseline_games': int,  # Games if you keep drop player
-                        'next_pickup_game': str,  # Date of pickup player's next game
-                        'reasoning': str
-                    }
-                ],
-                'summary': str
-            }
+            StreamingRecommendation model with opportunities and analysis
+
+        Raises:
+            Exception: If streaming calculation fails
         """
-        try:
-            # Parse and validate inputs
-            validation_result = _parse_and_validate_inputs(
-                roster_data, available_players, team_schedule
-            )
-            if not validation_result["success"]:
-                return validation_result
+        schedule_start = schedule.start_date
+        schedule_end = schedule.end_date
 
-            team_schedule = validation_result["team_schedule"]
-            schedule_start = validation_result["schedule_start"]
-            schedule_end = validation_result["schedule_end"]
+        logger.info(
+            f"Calculating streaming opportunities for {schedule_start} to {schedule_end}"
+        )
 
-            logger.info(
-                f"Calculating streaming opportunities for {schedule_start} to {schedule_end}"
-            )
+        # Get current date for games played calculation
+        current_date = datetime.now().strftime("%Y-%m-%d")
 
-            # Get current date for games played calculation
-            from datetime import datetime
+        # Build drop and pickup candidate lists
+        drop_candidates = _build_droppable_candidates(roster, schedule, current_date)
+        pickup_candidates = _build_pickup_candidates(
+            available_players, schedule, current_date
+        )
 
-            current_date = datetime.now().strftime("%Y-%m-%d")
+        logger.info(
+            f"Found {len(drop_candidates)} droppable players and {len(pickup_candidates)} pickup candidates"
+        )
 
-            # Build drop and pickup candidate lists
-            drop_candidates = _build_droppable_candidates(roster_data, team_schedule, current_date)
-            pickup_candidates = _build_pickup_candidates(
-                available_players, team_schedule, current_date
-            )
+        # Find all streaming opportunities
+        opportunities = _find_all_streaming_opportunities(
+            drop_candidates,
+            pickup_candidates,
+            schedule,
+            schedule_start,
+            schedule_end,
+        )
 
-            logger.info(
-                f"Found {len(drop_candidates)} droppable players and {len(pickup_candidates)} pickup candidates"
-            )
+        # Sort by improvement (descending) and limit results
+        opportunities.sort(key=lambda x: (x.improvement, x.total_games), reverse=True)
+        opportunities = opportunities[:max_recommendations]
 
-            # Find all streaming opportunities
-            opportunities = _find_all_streaming_opportunities(
-                drop_candidates,
-                pickup_candidates,
-                team_schedule,
-                schedule_start,
-                schedule_end,
-            )
+        # Create summary message
+        summary = _create_summary_message(
+            opportunities, len(drop_candidates), len(pickup_candidates)
+        )
 
-            # Sort by improvement (descending) and limit results
-            opportunities.sort(key=lambda x: (x["improvement"], x["total_games"]), reverse=True)
-            opportunities = opportunities[:max_recommendations]
-
-            # Create summary message
-            summary = _create_summary_message(
-                opportunities, len(drop_candidates), len(pickup_candidates)
-            )
-
-            return {
-                "success": True,
-                "opportunities": opportunities,
-                "total_opportunities": len(opportunities),
-                "droppable_players_analyzed": len(drop_candidates),
-                "pickup_candidates_analyzed": len(pickup_candidates),
-                "summary": summary,
-            }
-
-        except Exception as e:
-            logger.error(f"Error calculating streaming opportunities: {e}")
-            import traceback
-
-            traceback.print_exc()
-            return {
-                "success": False,
-                "error": f"Failed to calculate streaming opportunities: {e!s}",
-            }
+        # Return validated StreamingRecommendation model
+        return StreamingRecommendation(
+            opportunities=opportunities,
+            total_opportunities=len(opportunities),
+            droppable_players_analyzed=len(drop_candidates),
+            pickup_candidates_analyzed=len(pickup_candidates),
+            summary=summary,
+        )
 
 
 # Export for backwards compatibility
