@@ -27,6 +27,18 @@ client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 # Model to use
 MODEL = "claude-sonnet-4-20250514"
 
+# Rate limiting configuration
+# Anthropic's rate limit is 30,000 input tokens per minute
+ANTHROPIC_RATE_LIMIT_TPM = 30000
+
+# Throttle API calls if the previous call used more than this many input tokens
+# This threshold triggers delay calculation to prevent hitting rate limits
+RATE_LIMIT_TOKEN_THRESHOLD = 10000
+
+# Safety buffer multiplier to account for clock skew between local system and Anthropic's servers
+# A 1.1x buffer means we wait 10% longer than the calculated minimum to ensure reliability
+RATE_LIMIT_SAFETY_BUFFER = 1.1
+
 logger = AgentLogger.get_logger(__name__)
 AgentLogger.set_library_log_level("yfpy", logging.WARNING)
 AgentLogger.set_library_log_level("urllib3", logging.WARNING)
@@ -144,9 +156,24 @@ def run_agent(prompt: str, verbose: bool = True, dry_run: bool = False) -> str:
     cached_tools = [*TOOLS[:-1], {**TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
 
     api_call_count = 0
+    previous_input_tokens = 0  # Track tokens from previous API call for rate limiting
     while True:
         api_call_count += 1
         api_call_start = time.time()
+
+        # Rate limiting: Check if previous call exceeded threshold
+        if previous_input_tokens > RATE_LIMIT_TOKEN_THRESHOLD:
+            # Calculate delay: (tokens_used / rate_limit) * 60 seconds * safety_buffer
+            calculated_delay = (previous_input_tokens / ANTHROPIC_RATE_LIMIT_TPM) * 60
+            actual_delay = calculated_delay * RATE_LIMIT_SAFETY_BUFFER
+
+            logger.info(
+                f"Rate limiting: Previous call used {previous_input_tokens:,} tokens "
+                f"(>{RATE_LIMIT_TOKEN_THRESHOLD:,} threshold). "
+                f"Waiting {actual_delay:.1f} seconds to avoid rate limit "
+                f"(calculated: {calculated_delay:.1f}s + {(RATE_LIMIT_SAFETY_BUFFER - 1) * 100:.0f}% safety buffer)"
+            )
+            time.sleep(actual_delay)
 
         response = client.messages.create(
             model=MODEL,
@@ -170,6 +197,9 @@ def run_agent(prompt: str, verbose: bool = True, dry_run: bool = False) -> str:
                 cache_read_tokens=getattr(usage, "cache_read_input_tokens", 0),
                 execution_time_ms=api_call_time_ms,
             )
+
+            # Update token tracking for rate limiting
+            previous_input_tokens = getattr(usage, "input_tokens", 0)
 
         if verbose:
             logger.info(f"Stop reason: {response.stop_reason}")
