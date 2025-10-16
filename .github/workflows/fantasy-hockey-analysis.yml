@@ -1,6 +1,8 @@
 name: Fantasy Hockey Daily Analysis
 
 on:
+  pull_request:
+
   # Run daily at 3am EDT (7am UTC)
   schedule:
     - cron: '0 7 * * *'
@@ -24,7 +26,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.DEPLOY_KEY }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -69,5 +71,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/recommendations_history.json
-          git commit -m "chore: update recommendations history [$(date +'%Y-%m-%d %H:%M:%S')]" || echo "No changes to commit"
+          git commit -m "chore: add $(date +'%Y-%m-%d') recommendations history" || echo "No changes to commit"
           git push
