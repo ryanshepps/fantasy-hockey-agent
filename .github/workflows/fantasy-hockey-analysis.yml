@@ -1,8 +1,6 @@
 name: Fantasy Hockey Daily Analysis
 
 on:
-  pull_request:
-
   # Run daily at 3am EDT (7am UTC)
   schedule:
     - cron: '0 7 * * *'
