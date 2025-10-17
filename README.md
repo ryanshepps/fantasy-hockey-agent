@@ -126,6 +126,19 @@ source venv/bin/activate
 python fantasy_hockey_agent.py
 ```
 
+
+### CLI Flags:
+```bash
+# Default: prefetch enabled
+python fantasy_hockey_agent.py
+
+# Disable prefetch (Uses cached data -- useful for testing)
+python fantasy_hockey_agent.py --skip-prefetch
+
+# Do a dry run (Does not make any WRITE operations like sending email or saving recommendations)
+python fantasy_hockey_agent.py --dry-run
+```
+
 ## Contributing
 
 This is a personal project, but feel free to fork and customize for your needs!
