@@ -172,10 +172,6 @@ class AssessDroppablePlayers(BaseTool):
         return drop_candidates
 
 
-TOOL_DEFINITION = AssessDroppablePlayers.TOOL_DEFINITION
-assess_droppable_players = AssessDroppablePlayers.run
-
-
 def main():
     """Test function to run the tool standalone."""
     print("Testing assess_droppable_players tool...\n")

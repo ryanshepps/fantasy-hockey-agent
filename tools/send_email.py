@@ -204,7 +204,3 @@ class SendEmail(BaseTool):
             "attempt": SMTP_RETRY_ATTEMPTS,
         }
 
-
-# Export for backwards compatibility
-TOOL_DEFINITION = SendEmail.TOOL_DEFINITION
-send_email = SendEmail.run

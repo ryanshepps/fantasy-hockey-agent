@@ -332,11 +332,6 @@ class GetPlayerStats(BaseTool):
             return {"success": False, "error": f"Failed to fetch player stats: {e!s}"}
 
 
-# Export for backwards compatibility
-TOOL_DEFINITION = GetPlayerStats.TOOL_DEFINITION
-get_player_stats = GetPlayerStats.run
-
-
 def main():
     """
     Test function to run the tool standalone.

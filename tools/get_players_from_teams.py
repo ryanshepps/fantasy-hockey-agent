@@ -224,10 +224,6 @@ class GetPlayersFromTeams(BaseTool):
         return result_players
 
 
-TOOL_DEFINITION = GetPlayersFromTeams.TOOL_DEFINITION
-get_players_from_teams = GetPlayersFromTeams.run
-
-
 def display_players_by_team(players: list[Player]):
     """Display players grouped by team in a readable format."""
     from collections import defaultdict

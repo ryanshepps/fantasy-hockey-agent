@@ -101,10 +101,6 @@ class GetRecommendationHistory(BaseTool):
             }
 
 
-TOOL_DEFINITION = GetRecommendationHistory.TOOL_DEFINITION
-get_recommendation_history = GetRecommendationHistory.run
-
-
 def format_history_summary(history_data: dict[str, Any]) -> str:
     """
     Format history data into a readable text summary.

@@ -331,10 +331,6 @@ class FindStreamingMatches(BaseTool):
         )
 
 
-TOOL_DEFINITION = FindStreamingMatches.TOOL_DEFINITION
-find_streaming_matches = FindStreamingMatches.run
-
-
 def main():
     """Test function to run the tool standalone."""
     print("Testing find_streaming_matches tool...\n")

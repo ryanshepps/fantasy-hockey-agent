@@ -85,10 +85,6 @@ class SaveRecommendations(BaseTool):
             }
 
 
-TOOL_DEFINITION = SaveRecommendations.TOOL_DEFINITION
-save_recommendations = SaveRecommendations.run
-
-
 if __name__ == "__main__":
     test_subject = "Fantasy Hockey Weekly Analysis - Week of Oct 12"
     test_body = """Hi there!

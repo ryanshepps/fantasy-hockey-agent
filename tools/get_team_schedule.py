@@ -208,11 +208,6 @@ class GetTeamSchedule(BaseTool):
         )
 
 
-# Export for backwards compatibility
-TOOL_DEFINITION = GetTeamSchedule.TOOL_DEFINITION
-get_team_schedule = GetTeamSchedule.run
-
-
 def main():
     """
     Test function to run the tool standalone.
