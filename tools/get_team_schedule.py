@@ -3,7 +3,7 @@
 
 import sys
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.game import Game
 from models.schedule import Schedule, TeamSchedule, WeekInfo
+from modules.schedule_utils import get_fantasy_week_boundaries, get_date_range_from_boundaries
 from modules.tool_logger import get_logger
 from tools.base_tool import BaseTool
 
@@ -61,36 +62,6 @@ NHL_TEAMS = {
 }
 
 
-def _get_fantasy_week_boundaries(weeks: int = 2) -> tuple:
-    """Get start/end dates for fantasy weeks (Monday-Sunday)."""
-    today = datetime.now()
-    days_since_monday = today.weekday()
-    current_week_monday = today - timedelta(days=days_since_monday)
-
-    week_boundaries = []
-    for i in range(weeks):
-        week_start = current_week_monday + timedelta(weeks=i)
-        week_end = week_start + timedelta(days=6)
-        week_boundaries.append((week_start, week_end))
-
-    start_date = week_boundaries[0][0]
-    end_date = week_boundaries[-1][1]
-
-    return (start_date, end_date, week_boundaries)
-
-
-def _get_date_range_from_boundaries(start_date: datetime, end_date: datetime) -> list[str]:
-    """Generate list of dates between start and end (YYYY-MM-DD format)."""
-    dates = []
-    current = start_date
-
-    while current <= end_date:
-        dates.append(current.strftime("%Y-%m-%d"))
-        current += timedelta(days=1)
-
-    return dates
-
-
 class GetTeamSchedule(BaseTool):
     """Tool for fetching NHL team game schedules."""
 
@@ -135,8 +106,8 @@ class GetTeamSchedule(BaseTool):
         client = NHLClient()
 
         # Get fantasy week boundaries (Monday-Sunday)
-        start_date, end_date, week_boundaries = _get_fantasy_week_boundaries(weeks)
-        dates = _get_date_range_from_boundaries(start_date, end_date)
+        start_date, end_date, week_boundaries = get_fantasy_week_boundaries(weeks)
+        dates = get_date_range_from_boundaries(start_date, end_date)
 
         # Format week boundaries for response
         week_info_list = []

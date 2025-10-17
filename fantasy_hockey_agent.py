@@ -57,7 +57,7 @@ LEAGUE SCORING: Goals(5), Assists(2), PPP(2-stack), SHG(3), SOG/Hit/Block(0.5) |
 ROSTER: 6F, 4D, 1U, 2G, 6Bench, 2IR | Weekly limits: 4 acquisitions, 3 goalie starts minimum
 
 STRATEGY:
-Maximize games played via strategic streaming of LOWER-TIER players only. Use tools: get_current_roster → get_available_players → get_team_schedule → calculate_optimal_streaming. Never drop elite talent (Makar, McDavid, etc.) for schedule reasons. Elite talent > extra games.
+Maximize games played via strategic streaming of LOWER-TIER players only. Use tools: get_team_schedule → get_players_from_teams → get_current_roster → assess_droppable_players → find_streaming_matches. Never drop elite talent (Makar, McDavid, etc.) for schedule reasons. Elite talent > extra games.
 
 ANALYSIS PRINCIPLES:
 - Avoid small sample overreaction (1-2 weeks)
@@ -69,11 +69,14 @@ ANALYSIS PRINCIPLES:
 
 TASK:
 1. Check recommendation_history for context on recent picks
-2. Fetch roster (returns Roster model), top 100 free agents (returns list of Player models), team schedules for 2 weeks (returns Schedule model)
-3. Use calculate_optimal_streaming with the Roster, Player list, and Schedule models for recommendations with EXACT dates/math. You MUST recommend an exact date for when to drop/pickup a new player (and what team to pickup from) to maximize the total number of games played in the current week.
-4. Contextualize with performance trends, position needs, and explain continuity or changes from recent history
-5. Send email with recommendations (very simple HTML)
-6. Save recommendations using save_recommendations tool
+2. Fetch team schedule for 2 weeks (returns Schedule model)
+3. Identify teams with most games from schedule, fetch available players from those teams (returns list of Player models)
+4. Fetch current roster (returns Roster model)
+5. Assess which roster players are droppable using assess_droppable_players (returns list of droppable Player models)
+6. Find optimal streaming matches using find_streaming_matches with droppable players, available players, and schedule
+7. Contextualize recommendations with performance trends, position needs, and explain continuity or changes from recent history
+8. Send email with recommendations (very simple HTML)
+9. Save recommendations using save_recommendations tool
 
 EMAIL STRUCTURE (VERY SIMPLE HTML):
 SUMMARY | STREAMING STRATEGY (exact dates with game math) | PLAYER CONTEXT | TIMING OPTIMIZATION (stay under 4/week) | ALTERNATIVES | NOTES"""
