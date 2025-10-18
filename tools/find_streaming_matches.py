@@ -13,6 +13,7 @@ from typing import Any, ClassVar
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from pydantic import TypeAdapter
 from models.player import Player
 from models.schedule import Schedule
 from models.streaming import StreamingOpportunity, StreamingRecommendation
@@ -282,9 +283,9 @@ class FindStreamingMatches(BaseTool):
         calculates the exact drop/pickup timing that maximizes total games.
 
         Args:
-            droppable_players: List of droppable Player models from assess_droppable_players
-            available_players: List of Player models from get_players_from_teams
-            schedule: Schedule model from get_team_schedule tool
+            droppable_players: List of droppable Player models (or list of dicts)
+            available_players: List of Player models (or list of dicts)
+            schedule: Schedule model (or dict)
             max_matches: Maximum number of recommendations to return
 
         Returns:
@@ -293,6 +294,11 @@ class FindStreamingMatches(BaseTool):
         Raises:
             Exception: If streaming calculation fails
         """
+        # Validate inputs - handles both dicts (from prefetch) and models (from tool calls)
+        droppable_players = TypeAdapter(list[Player]).validate_python(droppable_players)
+        available_players = TypeAdapter(list[Player]).validate_python(available_players)
+        schedule = TypeAdapter(Schedule).validate_python(schedule)
+
         schedule_start = schedule.start_date
         schedule_end = schedule.end_date
 

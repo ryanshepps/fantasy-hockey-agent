@@ -9,6 +9,7 @@ from typing import Any, ClassVar
 # Add project root to path for imports when running standalone
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from pydantic import TypeAdapter
 from models.player import Player, PlayerPosition, PlayerQuality, PlayerTier
 from models.roster import Roster
 from models.schedule import Schedule
@@ -129,8 +130,8 @@ class AssessDroppablePlayers(BaseTool):
         high-end players are never returned as droppable.
 
         Args:
-            roster: Current Roster model from get_current_roster tool
-            schedule: Schedule model from get_team_schedule tool
+            roster: Current Roster model from get_current_roster tool (or dict)
+            schedule: Schedule model from get_team_schedule tool (or dict)
 
         Returns:
             List of Player models with quality_assessment populated, filtered to
@@ -139,6 +140,10 @@ class AssessDroppablePlayers(BaseTool):
         Raises:
             Exception: If assessment fails
         """
+        # Validate inputs - handles both dicts (from prefetch) and models (from tool calls)
+        roster = TypeAdapter(Roster).validate_python(roster)
+        schedule = TypeAdapter(Schedule).validate_python(schedule)
+
         drop_candidates = []
         current_date = datetime.now().strftime("%Y-%m-%d")
 
