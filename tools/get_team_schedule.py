@@ -3,7 +3,7 @@
 
 import sys
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.game import Game
 from models.schedule import Schedule, TeamSchedule, WeekInfo
+from modules.schedule_utils import get_date_range_from_boundaries, get_fantasy_week_boundaries
 from modules.tool_logger import get_logger
 from tools.base_tool import BaseTool
 
@@ -61,49 +62,19 @@ NHL_TEAMS = {
 }
 
 
-def _get_fantasy_week_boundaries(weeks: int = 2) -> tuple:
-    """Get start/end dates for fantasy weeks (Monday-Sunday)."""
-    today = datetime.now()
-    days_since_monday = today.weekday()
-    current_week_monday = today - timedelta(days=days_since_monday)
-
-    week_boundaries = []
-    for i in range(weeks):
-        week_start = current_week_monday + timedelta(weeks=i)
-        week_end = week_start + timedelta(days=6)
-        week_boundaries.append((week_start, week_end))
-
-    start_date = week_boundaries[0][0]
-    end_date = week_boundaries[-1][1]
-
-    return (start_date, end_date, week_boundaries)
-
-
-def _get_date_range_from_boundaries(start_date: datetime, end_date: datetime) -> list[str]:
-    """Generate list of dates between start and end (YYYY-MM-DD format)."""
-    dates = []
-    current = start_date
-
-    while current <= end_date:
-        dates.append(current.strftime("%Y-%m-%d"))
-        current += timedelta(days=1)
-
-    return dates
-
-
 class GetTeamSchedule(BaseTool):
     """Tool for fetching NHL team game schedules."""
 
     # Tool definition for Claude Agent SDK
     TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "get_team_schedule",
-        "description": "Get the number of games each NHL team plays over the next N fantasy weeks (Monday-Sunday). Returns a token-optimized structure with team abbreviations, game counts by week, and game details (date, opponent, home/away). Essential for weekly fantasy matchups as teams with more games = more points. Aligns to fantasy week boundaries (Monday start). Format: {weeks: int, teams: [{abbr: str, total: int, by_week: [int], games: [{date: str, opp: str, h: bool}]}]}",
+        "description": "Get the number of games each NHL team plays starting from TODAY through the end of the next N-1 fantasy weeks (Monday-Sunday). Returns a token-optimized structure with team abbreviations, game counts by week, and game details (date, opponent, home/away). Essential for weekly fantasy matchups as teams with more games = more points. Week 1 = rest of current week (today -> Sunday), Week 2+ = full weeks. Format: {weeks: int, teams: [{abbr: str, total: int, by_week: [int], games: [{date: str, opp: str, h: bool}]}]}",
         "input_schema": {
             "type": "object",
             "properties": {
                 "weeks": {
                     "type": "integer",
-                    "description": "Number of fantasy weeks to look ahead (default 2, which covers the current fantasy week and next fantasy week). Fantasy weeks run Monday-Sunday.",
+                    "description": "Number of fantasy weeks to include (default 2). Week 1 covers today through end of current fantasy week (Sunday), Week 2+ covers full fantasy weeks (Monday-Sunday). This ensures recommendations only consider games in the future.",
                     "default": 2,
                 }
             },
@@ -114,14 +85,15 @@ class GetTeamSchedule(BaseTool):
     @classmethod
     def run(cls, weeks: int = 2) -> Schedule:
         """
-        Get number of games each NHL team plays over specified fantasy weeks.
+        Get number of games each NHL team plays starting from today through specified fantasy weeks.
 
         Args:
-            weeks: Number of fantasy weeks to look ahead (default 2)
-                   Fantasy weeks run Monday-Sunday
+            weeks: Number of fantasy weeks to include (default 2)
+                   Week 1 = rest of current week (today -> Sunday)
+                   Week 2+ = full fantasy weeks (Monday -> Sunday)
 
         Returns:
-            Schedule object with validated TeamSchedule models
+            Schedule object with validated TeamSchedule models, starting from today's date
 
         Raises:
             Exception: If NHL API is not available or fetch fails
@@ -135,8 +107,8 @@ class GetTeamSchedule(BaseTool):
         client = NHLClient()
 
         # Get fantasy week boundaries (Monday-Sunday)
-        start_date, end_date, week_boundaries = _get_fantasy_week_boundaries(weeks)
-        dates = _get_date_range_from_boundaries(start_date, end_date)
+        start_date, end_date, week_boundaries = get_fantasy_week_boundaries(weeks)
+        dates = get_date_range_from_boundaries(start_date, end_date)
 
         # Format week boundaries for response
         week_info_list = []
@@ -155,7 +127,7 @@ class GetTeamSchedule(BaseTool):
         )
 
         logger.info(
-            f"Fetching NHL schedules from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (fantasy weeks: Monday-Sunday)"
+            f"Fetching NHL schedules from {start_date.strftime('%Y-%m-%d')} (today) to {end_date.strftime('%Y-%m-%d')} (fantasy weeks: Monday-Sunday)"
         )
 
         # Fetch schedule for each date
@@ -237,18 +209,14 @@ class GetTeamSchedule(BaseTool):
         )
 
 
-# Export for backwards compatibility
-TOOL_DEFINITION = GetTeamSchedule.TOOL_DEFINITION
-get_team_schedule = GetTeamSchedule.run
-
-
 def main():
     """
     Test function to run the tool standalone.
     """
     print("Fetching NHL team schedules for the next 2 fantasy weeks (Monday-Sunday)...\n")
 
-    schedule = get_team_schedule(weeks=2)
+    tool = GetTeamSchedule()
+    schedule = tool.execute(weeks=2)
 
     print(f"✓ Successfully fetched schedules for {len(schedule.teams)} teams\n")
     print(f"Period: {schedule.start_date} to {schedule.end_date}\n")

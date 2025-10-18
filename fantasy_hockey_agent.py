@@ -7,16 +7,18 @@ and provides pickup/drop recommendations via email.
 """
 
 import argparse
-import json
 import logging
 import os
-import time
+from typing import Any
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from fantasy_tools import TOOL_FUNCTIONS, TOOLS
+from modules.agent_orchestrator import AgentOrchestrator
 from modules.logger import AgentLogger
+from modules.prefetch_registry import PrefetchRegistry
+from modules.system_prompt_builder import SystemPromptBuilder
 
 # Load environment variables
 load_dotenv()
@@ -27,249 +29,174 @@ client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 # Model to use
 MODEL = "claude-sonnet-4-20250514"
 
-# Rate limiting configuration
-# Anthropic's rate limit is 30,000 input tokens per minute
-ANTHROPIC_RATE_LIMIT_TPM = 30000
-
-# Throttle API calls if the previous call used more than this many input tokens
-# This threshold triggers delay calculation to prevent hitting rate limits
-RATE_LIMIT_TOKEN_THRESHOLD = 10000
-
-# Safety buffer multiplier to account for clock skew between local system and Anthropic's servers
-# A 1.1x buffer means we wait 10% longer than the calculated minimum to ensure reliability
-RATE_LIMIT_SAFETY_BUFFER = 1.1
-
+# Configure logger
 logger = AgentLogger.get_logger(__name__)
 AgentLogger.set_library_log_level("yfpy", logging.WARNING)
 AgentLogger.set_library_log_level("urllib3", logging.WARNING)
 
 
-def get_system_prompt() -> str:
+def setup_prefetch_registry() -> PrefetchRegistry:
+    """
+    Configure which tools can be prefetched.
+
+    To add a new prefetchable tool:
+    1. Import the tool function from TOOL_FUNCTIONS
+    2. Call registry.register() with:
+       - tool_name: Must match key in TOOLS
+       - tool_function: The actual function to call
+       - data_key: Key to use in prefetch_data dict
+       - description: What this tool fetches
+
+    Returns:
+        Configured PrefetchRegistry
+    """
+    registry = PrefetchRegistry()
+
+    registry.register(
+        tool_name="get_recommendation_history",
+        tool_function=TOOL_FUNCTIONS["get_recommendation_history"],
+        data_key="recommendation_history",
+        description="Recent recommendation history from file",
+    )
+
+    registry.register(
+        tool_name="get_current_roster",
+        tool_function=TOOL_FUNCTIONS["get_current_roster"],
+        data_key="roster",
+        description="Current roster from Yahoo API",
+    )
+
+    registry.register(
+        tool_name="get_team_schedule",
+        tool_function=lambda: TOOL_FUNCTIONS["get_team_schedule"](weeks=2),
+        data_key="schedule",
+        description="Team schedule for next 2 weeks from NHL API",
+    )
+
+    return registry
+
+
+def get_system_prompt(prefetch_data: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """
     Generate the system prompt for the fantasy hockey agent.
 
+    Args:
+        prefetch_data: Optional pre-fetched data to embed in system prompt
+
     Returns:
-        Complete system prompt string
+        List of system prompt blocks
     """
-    return """You are an expert fantasy hockey analyst for a points-based league.
+    instruction_text = """You are an expert fantasy hockey analyst for a points-based league.
 
 LEAGUE SCORING: Goals(5), Assists(2), PPP(2-stack), SHG(3), SOG/Hit/Block(0.5) | Goalie: W(6), GA(-3.5), Save(0.5), SO(6)
 ROSTER: 6F, 4D, 1U, 2G, 6Bench, 2IR | Weekly limits: 4 acquisitions, 3 goalie starts minimum
 
 STRATEGY:
-Maximize games played via strategic streaming of LOWER-TIER players only. Use tools: get_current_roster → get_available_players → get_team_schedule → calculate_optimal_streaming. Never drop elite talent (Makar, McDavid, etc.) for schedule reasons. Elite talent > extra games.
+Maximize games played via strategic streaming of MID-TIER and STREAMABLE players only. Use tools: get_team_schedule → get_players_from_teams → get_current_roster → assess_droppable_players → find_streaming_matches. Never drop elite talent (Makar, McDavid, etc.) for schedule reasons. Elite talent > extra games.
 
 ANALYSIS PRINCIPLES:
-- Avoid small sample overreaction (1-2 weeks)
+- Avoid making major decisions based on small sample sizes (1-2 weeks)
 - Balance hot streaks vs established value
-- Focus on sustainable opportunity (top-6 F, top-4 D, starting G)
-- Check recommendation history for context, but prioritize highest-conviction picks
-- It's fine to repeat recommendations if conviction remains strong, or pivot to better opportunities
-- Verify drop candidates are truly droppable
+- Check recommendation history for context and make new high-conviction picks if the opportunity is there
 
 TASK:
 1. Check recommendation_history for context on recent picks
-2. Fetch roster (returns Roster model), top 100 free agents (returns list of Player models), team schedules for 2 weeks (returns Schedule model)
-3. Use calculate_optimal_streaming with the Roster, Player list, and Schedule models for recommendations with EXACT dates/math. You MUST recommend an exact date for when to drop/pickup a new player (and what team to pickup from) to maximize the total number of games played in the current week.
-4. Contextualize with performance trends, position needs, and explain continuity or changes from recent history
-5. Send email with recommendations (very simple HTML)
-6. Save recommendations using save_recommendations tool
+2. Assess which roster players are droppable using assess_droppable_players tool (returns list of droppable Player models)
+3. Find optimal streaming matches using find_streaming_matches tool with droppable players, available players, and schedule
+4. Think through a streaming strategy step by step and come up with a plan for streaming players to maximize games played
+5. Format your plan into a simple HTML email with the following structure:
+  - STREAMING STRATEGY: Must provide exact dates that will maximize total games played
+  - ALTERNATIVES: If there are no optimal streaming matches, provide a list of alternatives
+  - NOTES: Any additional notes or context
+6. Send the email using the send_email tool
+7. Save the recommendations using the save_recommendations tool"""
 
-EMAIL STRUCTURE (VERY SIMPLE HTML):
-SUMMARY | STREAMING STRATEGY (exact dates with game math) | PLAYER CONTEXT | TIMING OPTIMIZATION (stay under 4/week) | ALTERNATIVES | NOTES"""
+    builder = SystemPromptBuilder(instruction_text)
+    return builder.build(prefetch_data)
 
 
-def process_tool_call(
-    tool_name: str, tool_input: dict, dry_run: bool = False
-) -> tuple[dict, float]:
+def prefetch_static_data(registry: PrefetchRegistry) -> dict[str, Any]:
     """
-    Execute a tool function and return the result with execution time.
+    Pre-fetch data using the configured registry.
 
     Args:
-        tool_name: Name of the tool to execute
-        tool_input: Input parameters for the tool
-        dry_run: If True, skip execution of send_email and save_recommendations
+        registry: Configured PrefetchRegistry
 
     Returns:
-        Tuple of (tool execution result as a dictionary, execution time in ms)
+        Dictionary mapping data_key -> tool result
     """
-    if tool_name not in TOOL_FUNCTIONS:
-        return {"error": f"Unknown tool: {tool_name}"}, 0.0
+    logger.info("Pre-fetching static data...")
 
-    # In dry-run mode, skip send_email and save_recommendations
-    if dry_run and tool_name in ["send_email", "save_recommendations"]:
-        logger.info(f"DRY-RUN: Skipping '{tool_name}' execution")
+    import time
 
-        if tool_name == "send_email":
-            subject = tool_input.get("subject", "")
-            body = tool_input.get("body", "")
-            logger.info(f"DRY-RUN: Would send email with subject: {subject}")
-            logger.info(f"DRY-RUN: Email body ({len(body)} chars):")
-            logger.info("=" * 80)
-            logger.info(body)
-            logger.info("=" * 80)
-            return {
-                "success": True,
-                "message": f"DRY-RUN: Email would be sent (subject: {subject})",
-                "dry_run": True,
-            }, 0.0
-
-        elif tool_name == "save_recommendations":
-            subject = tool_input.get("subject", "")
-            logger.info(f"DRY-RUN: Would save recommendation with subject: {subject}")
-            return {
-                "success": True,
-                "message": "DRY-RUN: Recommendations would be saved to history",
-                "dry_run": True,
-            }, 0.0
+    prefetch_start = time.time()
 
     try:
-        start_time = time.time()
-        result = TOOL_FUNCTIONS[tool_name](**tool_input)
-        execution_time_ms = (time.time() - start_time) * 1000
+        data = registry.execute_all()
 
-        # Serialize Pydantic models to JSON-compatible dicts
+        # Serialize Pydantic models
         from pydantic import BaseModel
 
-        if isinstance(result, BaseModel):
-            result = result.model_dump(mode="json")
-        elif isinstance(result, list) and result and isinstance(result[0], BaseModel):
-            result = [item.model_dump(mode="json") for item in result]
+        for key, value in data.items():
+            if isinstance(value, BaseModel):
+                data[key] = value.model_dump(mode="json")
 
-        logger.info(f"Tool '{tool_name}' executed in {execution_time_ms:.2f}ms")
-        return result, execution_time_ms
+        prefetch_time = (time.time() - prefetch_start) * 1000
+        logger.info(f"Pre-fetch completed in {prefetch_time:.2f}ms")
+
+        return data
+
     except Exception as e:
-        logger.error(f"Tool '{tool_name}' failed: {e!s}")
-        return {"error": str(e)}, 0.0
+        logger.error(f"Pre-fetch failed: {e}")
+        logger.warning("Falling back to tool-based fetching")
+        return {}
 
 
-def run_agent(prompt: str, verbose: bool = True, dry_run: bool = False) -> str:
+def run_agent(
+    prompt: str,
+    prefetch_registry: PrefetchRegistry | None = None,
+    prefetch_data: dict[str, Any] | None = None,
+    verbose: bool = True,
+    dry_run: bool = False,
+) -> str:
     """
     Run the fantasy hockey agent with the given prompt.
 
     Args:
         prompt: Initial prompt for the agent
+        prefetch_registry: Registry of prefetchable tools (for filtering)
+        prefetch_data: Optional pre-fetched data to embed in system prompt
         verbose: Print conversation details
         dry_run: If True, skip sending emails and saving recommendations
 
     Returns:
         Final response from Claude
     """
-    messages = [{"role": "user", "content": prompt}]
-    mode = "DRY-RUN MODE" if dry_run else ""
-    if verbose:
-        logger.info(f"Starting Fantasy Hockey Agent {mode}".strip())
+    system_prompt_blocks = get_system_prompt(prefetch_data)
 
-    system_prompt_text = get_system_prompt()
-    cached_tools = [*TOOLS[:-1], {**TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
-
-    api_call_count = 0
-    previous_input_tokens = 0  # Track tokens from previous API call for rate limiting
-    while True:
-        api_call_count += 1
-        api_call_start = time.time()
-
-        # Rate limiting: Check if previous call exceeded threshold
-        if previous_input_tokens > RATE_LIMIT_TOKEN_THRESHOLD:
-            # Calculate delay: (tokens_used / rate_limit) * 60 seconds * safety_buffer
-            calculated_delay = (previous_input_tokens / ANTHROPIC_RATE_LIMIT_TPM) * 60
-            actual_delay = calculated_delay * RATE_LIMIT_SAFETY_BUFFER
-
-            logger.info(
-                f"Rate limiting: Previous call used {previous_input_tokens:,} tokens "
-                f"(>{RATE_LIMIT_TOKEN_THRESHOLD:,} threshold). "
-                f"Waiting {actual_delay:.1f} seconds to avoid rate limit "
-                f"(calculated: {calculated_delay:.1f}s + {(RATE_LIMIT_SAFETY_BUFFER - 1) * 100:.0f}% safety buffer)"
-            )
-            time.sleep(actual_delay)
-
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=16384,
-            system=[
-                {"type": "text", "text": system_prompt_text, "cache_control": {"type": "ephemeral"}}
-            ],
-            tools=cached_tools,
-            messages=messages,
-        )
-
-        api_call_time_ms = (time.time() - api_call_start) * 1000
-
-        if hasattr(response, "usage"):
-            usage = response.usage
-            AgentLogger.log_token_usage(
-                step=f"claude_api_call_{api_call_count}",
-                input_tokens=getattr(usage, "input_tokens", 0),
-                output_tokens=getattr(usage, "output_tokens", 0),
-                cache_creation_tokens=getattr(usage, "cache_creation_input_tokens", 0),
-                cache_read_tokens=getattr(usage, "cache_read_input_tokens", 0),
-                execution_time_ms=api_call_time_ms,
-            )
-
-            # Update token tracking for rate limiting
-            previous_input_tokens = getattr(usage, "input_tokens", 0)
-
+    # Filter out prefetched tools if data was provided
+    if prefetch_data and prefetch_registry:
+        prefetched_tool_names = prefetch_registry.get_tool_names()
+        available_tools = [tool for tool in TOOLS if tool["name"] not in prefetched_tool_names]
         if verbose:
-            logger.info(f"Stop reason: {response.stop_reason}")
+            logger.info(
+                f"Pre-fetch enabled: {len(TOOLS) - len(available_tools)} tools removed from list"
+            )
+    else:
+        available_tools = TOOLS
 
-        assistant_content = []
-        for block in response.content:
-            if block.type == "text":
-                assistant_content.append(block)
-            elif block.type == "tool_use":
-                if verbose:
-                    logger.info(f"Tool: {block.name}")
-                assistant_content.append(block)
+    orchestrator = AgentOrchestrator(
+        client=client,
+        system_blocks=system_prompt_blocks,
+        tools=available_tools,
+        tool_functions=TOOL_FUNCTIONS,
+        initial_prompt=prompt,
+        model=MODEL,
+        dry_run=dry_run,
+        verbose=verbose,
+    )
 
-        # Add assistant's response to messages
-        messages.append({"role": "assistant", "content": assistant_content})
-
-        # If Claude is done (no more tool calls), break
-        if response.stop_reason == "end_turn":
-            # Extract final text response
-            final_text = ""
-            for block in response.content:
-                if block.type == "text":
-                    final_text += block.text
-            return final_text
-
-        # Process tool calls
-        if response.stop_reason == "tool_use":
-            tool_results = []
-
-            for block in response.content:
-                if block.type == "tool_use":
-                    tool_result, execution_time_ms = process_tool_call(
-                        block.name, block.input, dry_run
-                    )
-
-                    AgentLogger.log_token_usage(
-                        step=f"tool_{block.name}",
-                        input_tokens=0,
-                        output_tokens=0,
-                        execution_time_ms=execution_time_ms,
-                    )
-
-                    tool_results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": json.dumps(tool_result),
-                        }
-                    )
-
-            # Send tool results back to Claude
-            messages.append({"role": "user", "content": tool_results})
-        else:
-            # Unexpected stop reason
-            break
-
-    # If we exit the loop without returning, return the last text
-    for block in reversed(response.content):
-        if block.type == "text":
-            return block.text
-
-    return "Agent completed without final response."
+    return orchestrator.run()
 
 
 def main():
@@ -284,6 +211,11 @@ def main():
         action="store_true",
         help="Run analysis without sending email or saving recommendations",
     )
+    parser.add_argument(
+        "--skip-prefetch",
+        action="store_true",
+        help="Skip pre-fetching static data (use tools instead, useful for testing)",
+    )
     args = parser.parse_args()
 
     if not os.getenv("ANTHROPIC_API_KEY"):
@@ -291,12 +223,31 @@ def main():
         logger.error("Please add it to your .env file")
         return
 
+    # Setup prefetch registry
+    prefetch_registry = setup_prefetch_registry()
+
+    # Pre-fetch static data unless skipped
+    prefetch_data = None
+    if not args.skip_prefetch:
+        try:
+            prefetch_data = prefetch_static_data(prefetch_registry)
+            logger.info("Pre-fetch successful - data will be cached in system prompt")
+        except Exception as e:
+            logger.warning(f"Pre-fetch failed: {e}")
+            logger.warning("Falling back to tool-based fetching")
+
     prompt = "Please proceed with the analysis and send me the email."
 
     mode_msg = " (DRY-RUN)" if args.dry_run else ""
     logger.info(f"Starting Fantasy Hockey Analysis{mode_msg}...")
 
-    result = run_agent(prompt, verbose=True, dry_run=args.dry_run)
+    result = run_agent(
+        prompt,
+        prefetch_registry=prefetch_registry,
+        prefetch_data=prefetch_data,
+        verbose=True,
+        dry_run=args.dry_run,
+    )
 
     logger.info("Analysis complete!")
     logger.info(result)

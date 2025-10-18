@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Base class for Fantasy Hockey tools."""
 
+import sys
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
@@ -11,7 +12,7 @@ class BaseTool(ABC):
     TOOL_DEFINITION: ClassVar[dict[str, Any]]
 
     def __init_subclass__(cls, **kwargs):
-        """Validate that subclasses define TOOL_DEFINITION."""
+        """Validate that subclasses define TOOL_DEFINITION and auto-export to module."""
         super().__init_subclass__(**kwargs)
 
         if "TOOL_DEFINITION" not in cls.__dict__:
@@ -28,8 +29,16 @@ class BaseTool(ABC):
                 f"TOOL_DEFINITION in '{cls.__name__}' is missing required keys: {missing_keys}"
             )
 
+        # Auto-export TOOL_DEFINITION and run function to module namespace
+        module = sys.modules[cls.__module__]
+        module.TOOL_DEFINITION = cls.TOOL_DEFINITION
+
+        # Export run function with snake_case name derived from tool name
+        tool_name = cls.TOOL_DEFINITION["name"]
+        setattr(module, tool_name, cls.run)
+
     @classmethod
     @abstractmethod
-    def run(cls, **kwargs) -> dict[str, Any]:
+    def run(cls, **kwargs) -> Any:
         """Execute the tool with the given parameters."""
         raise NotImplementedError(f"Tool '{cls.__name__}' must implement run() method")

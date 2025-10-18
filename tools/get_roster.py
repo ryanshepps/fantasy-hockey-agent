@@ -206,11 +206,6 @@ class GetCurrentRoster(BaseTool):
         )
 
 
-# Export for backwards compatibility
-TOOL_DEFINITION = GetCurrentRoster.TOOL_DEFINITION
-get_current_roster = GetCurrentRoster.run
-
-
 def _print_position_group(players: list[Player], position_name: str):
     """Print a group of players by position."""
     print(f"\n{position_name} ({len(players)} players)")
@@ -257,7 +252,8 @@ def main():
         return
 
     print("Testing get_current_roster...")
-    roster = get_current_roster()
+    tool = GetCurrentRoster()
+    roster = tool.execute()
     display_roster(roster)
 
 

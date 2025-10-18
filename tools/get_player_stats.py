@@ -332,11 +332,6 @@ class GetPlayerStats(BaseTool):
             return {"success": False, "error": f"Failed to fetch player stats: {e!s}"}
 
 
-# Export for backwards compatibility
-TOOL_DEFINITION = GetPlayerStats.TOOL_DEFINITION
-get_player_stats = GetPlayerStats.run
-
-
 def main():
     """
     Test function to run the tool standalone.
@@ -344,7 +339,8 @@ def main():
     print("Testing get_player_stats tool...\n")
 
     # Test with player IDs (you'd need real NHL player IDs)
-    result = get_player_stats(player_ids=[8478402, 8477934])  # Example IDs
+    tool = GetPlayerStats()
+    result = tool.execute(player_ids=[8478402, 8477934])  # Example IDs
 
     if result["success"]:
         print(f"✓ {result['summary']}\n")
