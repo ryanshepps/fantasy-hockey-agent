@@ -56,21 +56,21 @@ def setup_prefetch_registry() -> PrefetchRegistry:
         tool_name="get_recommendation_history",
         tool_function=TOOL_FUNCTIONS["get_recommendation_history"],
         data_key="recommendation_history",
-        description="Recent recommendation history from file"
+        description="Recent recommendation history from file",
     )
 
     registry.register(
         tool_name="get_current_roster",
         tool_function=TOOL_FUNCTIONS["get_current_roster"],
         data_key="roster",
-        description="Current roster from Yahoo API"
+        description="Current roster from Yahoo API",
     )
 
     registry.register(
         tool_name="get_team_schedule",
         tool_function=lambda: TOOL_FUNCTIONS["get_team_schedule"](weeks=2),
         data_key="schedule",
-        description="Team schedule for next 2 weeks from NHL API"
+        description="Team schedule for next 2 weeks from NHL API",
     )
 
     return registry
@@ -128,6 +128,7 @@ def prefetch_static_data(registry: PrefetchRegistry) -> dict[str, Any]:
     logger.info("Pre-fetching static data...")
 
     import time
+
     prefetch_start = time.time()
 
     try:
@@ -135,6 +136,7 @@ def prefetch_static_data(registry: PrefetchRegistry) -> dict[str, Any]:
 
         # Serialize Pydantic models
         from pydantic import BaseModel
+
         for key, value in data.items():
             if isinstance(value, BaseModel):
                 data[key] = value.model_dump(mode="json")
@@ -155,7 +157,7 @@ def run_agent(
     prefetch_registry: PrefetchRegistry | None = None,
     prefetch_data: dict[str, Any] | None = None,
     verbose: bool = True,
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> str:
     """
     Run the fantasy hockey agent with the given prompt.
@@ -175,14 +177,10 @@ def run_agent(
     # Filter out prefetched tools if data was provided
     if prefetch_data and prefetch_registry:
         prefetched_tool_names = prefetch_registry.get_tool_names()
-        available_tools = [
-            tool for tool in TOOLS
-            if tool["name"] not in prefetched_tool_names
-        ]
+        available_tools = [tool for tool in TOOLS if tool["name"] not in prefetched_tool_names]
         if verbose:
             logger.info(
-                f"Pre-fetch enabled: {len(TOOLS) - len(available_tools)} "
-                f"tools removed from list"
+                f"Pre-fetch enabled: {len(TOOLS) - len(available_tools)} tools removed from list"
             )
     else:
         available_tools = TOOLS
@@ -195,7 +193,7 @@ def run_agent(
         initial_prompt=prompt,
         model=MODEL,
         dry_run=dry_run,
-        verbose=verbose
+        verbose=verbose,
     )
 
     return orchestrator.run()
@@ -248,7 +246,7 @@ def main():
         prefetch_registry=prefetch_registry,
         prefetch_data=prefetch_data,
         verbose=True,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
     )
 
     logger.info("Analysis complete!")

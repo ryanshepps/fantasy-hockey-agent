@@ -1,4 +1,5 @@
 """Rate limiter for Anthropic API calls."""
+
 import logging
 import time
 
@@ -15,10 +16,7 @@ class RateLimiter:
     """
 
     def __init__(
-        self,
-        rate_limit_tpm: int = 30000,
-        token_threshold: int = 10000,
-        safety_buffer: float = 1.1
+        self, rate_limit_tpm: int = 30000, token_threshold: int = 10000, safety_buffer: float = 1.1
     ):
         """
         Initialize rate limiter.

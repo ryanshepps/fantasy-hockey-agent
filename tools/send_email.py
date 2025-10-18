@@ -203,4 +203,3 @@ class SendEmail(BaseTool):
             "smtp_port": SMTP_PORT,
             "attempt": SMTP_RETRY_ATTEMPTS,
         }
-

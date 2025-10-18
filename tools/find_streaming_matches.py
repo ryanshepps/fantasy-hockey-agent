@@ -23,9 +23,11 @@ from tools.base_tool import BaseTool
 
 try:
     from modules.logger import AgentLogger
+
     logger = AgentLogger.get_logger(__name__)
 except ImportError:
     import logging
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 

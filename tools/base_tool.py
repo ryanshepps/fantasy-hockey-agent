@@ -32,7 +32,7 @@ class BaseTool(ABC):
         # Auto-export TOOL_DEFINITION and run function to module namespace
         module = sys.modules[cls.__module__]
         setattr(module, "TOOL_DEFINITION", cls.TOOL_DEFINITION)
-        
+
         # Export run function with snake_case name derived from tool name
         tool_name = cls.TOOL_DEFINITION["name"]
         setattr(module, tool_name, cls.run)

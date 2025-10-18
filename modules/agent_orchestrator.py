@@ -1,4 +1,5 @@
 """Agent orchestrator for conversation loop management."""
+
 import json
 import logging
 import time
@@ -35,7 +36,7 @@ class AgentOrchestrator:
         initial_prompt: str,
         model: str = "claude-sonnet-4-20250514",
         dry_run: bool = False,
-        verbose: bool = True
+        verbose: bool = True,
     ):
         """
         Initialize orchestrator.
@@ -76,9 +77,7 @@ class AgentOrchestrator:
         if not tools:
             return []
 
-        cached_tools = tools[:-1] + [
-            {**tools[-1], "cache_control": {"type": "ephemeral"}}
-        ]
+        cached_tools = tools[:-1] + [{**tools[-1], "cache_control": {"type": "ephemeral"}}]
         return cached_tools
 
     def run(self) -> str:
@@ -171,9 +170,7 @@ class AgentOrchestrator:
         tool_results = []
 
         for block in tool_blocks:
-            tool_result, execution_time_ms = self.tool_executor.execute(
-                block.name, block.input
-            )
+            tool_result, execution_time_ms = self.tool_executor.execute(block.name, block.input)
 
             AgentLogger.log_token_usage(
                 step=f"tool_{block.name}",
@@ -182,10 +179,12 @@ class AgentOrchestrator:
                 execution_time_ms=execution_time_ms,
             )
 
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "content": json.dumps(tool_result),
-            })
+            tool_results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": json.dumps(tool_result),
+                }
+            )
 
         return tool_results

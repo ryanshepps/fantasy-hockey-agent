@@ -26,8 +26,7 @@ def get_player_team_abbr(player: Player) -> str | None:
 
 
 def positions_are_compatible(
-    drop_position: PlayerPosition | None,
-    pickup_position: PlayerPosition | None
+    drop_position: PlayerPosition | None, pickup_position: PlayerPosition | None
 ) -> bool:
     """
     Check if two positions are compatible for streaming.

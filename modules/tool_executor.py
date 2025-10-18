@@ -1,4 +1,5 @@
 """Tool executor with dry-run support."""
+
 import logging
 import time
 from typing import Any, Callable

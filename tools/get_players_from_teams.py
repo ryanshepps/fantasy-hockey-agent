@@ -149,7 +149,9 @@ class GetPlayersFromTeams(BaseTool):
 
         for player in all_players:
             # Get team abbreviation (in Yahoo format)
-            yahoo_team_abbr = player.editorial_team_abbr if hasattr(player, "editorial_team_abbr") else None
+            yahoo_team_abbr = (
+                player.editorial_team_abbr if hasattr(player, "editorial_team_abbr") else None
+            )
             if not yahoo_team_abbr or yahoo_team_abbr not in yahoo_teams:
                 continue
 

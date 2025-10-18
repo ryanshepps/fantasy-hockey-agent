@@ -8,7 +8,9 @@ from models.player import Player
 from models.schedule import Schedule
 
 
-def get_fantasy_week_boundaries(weeks: int = 2) -> tuple[datetime, datetime, list[tuple[datetime, datetime]]]:
+def get_fantasy_week_boundaries(
+    weeks: int = 2,
+) -> tuple[datetime, datetime, list[tuple[datetime, datetime]]]:
     """
     Get start/end dates for fantasy weeks (Monday-Sunday), starting from today.
 
@@ -122,9 +124,11 @@ def calculate_games_for_player(
 
     try:
         from modules.logger import AgentLogger
+
         logger = AgentLogger.get_logger(__name__)
     except ImportError:
         import logging
+
         logger = logging.getLogger(__name__)
 
     team_abbr = get_player_team_abbr(player)

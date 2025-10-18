@@ -18,9 +18,11 @@ from tools.base_tool import BaseTool
 
 try:
     from modules.logger import AgentLogger
+
     logger = AgentLogger.get_logger(__name__)
 except ImportError:
     import logging
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
@@ -172,7 +174,9 @@ class AssessDroppablePlayers(BaseTool):
                     f"({quality.fantasy_ppg} PPG) - NOT droppable"
                 )
 
-        logger.info(f"Found {len(drop_candidates)} droppable players out of {len(roster.players)} total")
+        logger.info(
+            f"Found {len(drop_candidates)} droppable players out of {len(roster.players)} total"
+        )
 
         return drop_candidates
 

@@ -1,4 +1,5 @@
 """Registry for prefetchable tools with declarative configuration."""
+
 from typing import Any, Callable
 import logging
 from pydantic import BaseModel
@@ -9,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class ToolMetadata(BaseModel):
     """Metadata for a prefetchable tool."""
+
     tool_name: str
     tool_function: Callable[..., Any]
     data_key: str
@@ -31,11 +33,7 @@ class PrefetchRegistry:
         self._registry: dict[str, ToolMetadata] = {}
 
     def register(
-        self,
-        tool_name: str,
-        tool_function: Callable[..., Any],
-        data_key: str,
-        description: str
+        self, tool_name: str, tool_function: Callable[..., Any], data_key: str, description: str
     ) -> None:
         """
         Register a tool as prefetchable.
@@ -50,7 +48,7 @@ class PrefetchRegistry:
             tool_name=tool_name,
             tool_function=tool_function,
             data_key=data_key,
-            description=description
+            description=description,
         )
         logger.debug(f"Registered prefetchable tool: {tool_name} -> {data_key}")
 

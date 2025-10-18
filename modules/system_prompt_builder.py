@@ -1,4 +1,5 @@
 """System prompt builder with prefetch data support."""
+
 import json
 from typing import Any
 
@@ -36,11 +37,9 @@ class SystemPromptBuilder:
 
         if prefetch_data:
             data_text = self._format_prefetch_data(prefetch_data)
-            blocks.append({
-                "type": "text",
-                "text": data_text,
-                "cache_control": {"type": "ephemeral"}
-            })
+            blocks.append(
+                {"type": "text", "text": data_text, "cache_control": {"type": "ephemeral"}}
+            )
         else:
             # Cache instructions if no prefetch data
             blocks[0]["cache_control"] = {"type": "ephemeral"}
