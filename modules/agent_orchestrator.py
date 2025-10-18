@@ -4,13 +4,13 @@ import json
 import logging
 import time
 from typing import Any
+
 from anthropic import Anthropic
 
 from modules.logger import AgentLogger
-from modules.rate_limiter import RateLimiter
 from modules.message_handler import MessageHandler
+from modules.rate_limiter import RateLimiter
 from modules.tool_executor import ToolExecutor
-
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class AgentOrchestrator:
         if not tools:
             return []
 
-        cached_tools = tools[:-1] + [{**tools[-1], "cache_control": {"type": "ephemeral"}}]
+        cached_tools = [*tools[:-1], {**tools[-1], "cache_control": {"type": "ephemeral"}}]
         return cached_tools
 
     def run(self) -> str:

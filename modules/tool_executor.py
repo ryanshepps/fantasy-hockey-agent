@@ -2,9 +2,10 @@
 
 import logging
 import time
-from typing import Any, Callable
-from pydantic import BaseModel
+from collections.abc import Callable
+from typing import Any, ClassVar
 
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class ToolExecutor:
     - Track execution time
     """
 
-    SIDE_EFFECT_TOOLS = ["send_email", "save_recommendations"]
+    SIDE_EFFECT_TOOLS: ClassVar[list[str]] = ["send_email", "save_recommendations"]
 
     def __init__(self, tool_functions: dict[str, Callable], dry_run: bool = False):
         """

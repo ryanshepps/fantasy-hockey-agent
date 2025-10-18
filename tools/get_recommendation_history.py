@@ -137,12 +137,13 @@ def format_history_summary(history_data: dict[str, Any]) -> str:
 if __name__ == "__main__":
     print("Testing get_recommendation_history()...\n")
 
-    result = get_recommendation_history(weeks_back=4)
+    tool = GetRecommendationHistory()
+    result = tool.execute(weeks_back=4)
     print(json.dumps(result, indent=2))
 
     print("\n\nFormatted Summary:\n")
     print(format_history_summary(result))
 
     print("\n\n=== Testing search term filter ===\n")
-    result2 = get_recommendation_history(weeks_back=4, search_term="McDavid")
+    result2 = tool.execute(weeks_back=4, search_term="McDavid")
     print(format_history_summary(result2))

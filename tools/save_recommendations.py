@@ -96,5 +96,6 @@ He's heating up with 5 goals in last 3 games. Edmonton has 4 games this week.
 
 Consider dropping: _John Doe_ - Cold streak, only 2 games this week."""
 
-    result = save_recommendations(subject=test_subject, body=test_body)
+    tool = SaveRecommendations()
+    result = tool.execute(subject=test_subject, body=test_body)
     print(json.dumps(result, indent=2))

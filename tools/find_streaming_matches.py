@@ -14,6 +14,7 @@ from typing import Any, ClassVar
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from pydantic import TypeAdapter
+
 from models.player import Player
 from models.schedule import Schedule
 from models.streaming import StreamingOpportunity, StreamingRecommendation

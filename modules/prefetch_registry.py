@@ -1,9 +1,10 @@
 """Registry for prefetchable tools with declarative configuration."""
 
-from typing import Any, Callable
 import logging
-from pydantic import BaseModel
+from collections.abc import Callable
+from typing import Any
 
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 

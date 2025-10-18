@@ -252,7 +252,8 @@ def main():
         return
 
     print("Testing get_current_roster...")
-    roster = get_current_roster()
+    tool = GetCurrentRoster()
+    roster = tool.execute()
     display_roster(roster)
 
 

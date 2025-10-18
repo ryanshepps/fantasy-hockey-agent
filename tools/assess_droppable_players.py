@@ -10,6 +10,7 @@ from typing import Any, ClassVar
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from pydantic import TypeAdapter
+
 from models.player import Player, PlayerPosition, PlayerQuality, PlayerTier
 from models.roster import Roster
 from models.schedule import Schedule

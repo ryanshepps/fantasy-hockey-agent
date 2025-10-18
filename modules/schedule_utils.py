@@ -55,7 +55,7 @@ def get_fantasy_week_boundaries(
     week_boundaries.append((today, current_week_end))
 
     # Week 2+: Full fantasy weeks (Monday-Sunday)
-    for i in range(1, weeks):
+    for _i in range(1, weeks):
         week_start = current_week_end + timedelta(days=1)  # Monday after previous Sunday
         week_end = week_start + timedelta(days=6)  # Sunday
         week_boundaries.append((week_start, week_end))

@@ -236,7 +236,7 @@ def display_players_by_team(players: list[Player]):
             players_by_team[p.nhl_team].append(p)
 
     print(f"\n{'=' * 80}")
-    print(f"AVAILABLE FREE AGENTS BY TEAM")
+    print("AVAILABLE FREE AGENTS BY TEAM")
     print("=" * 80)
 
     for team in sorted(players_by_team.keys()):
@@ -263,8 +263,9 @@ def main():
 
     # Test with a few high-game teams (example)
     test_teams = ["TOR", "EDM", "COL"]
-    players = get_players_from_teams(teams=test_teams, limit_per_team=5)
-    display_players_by_team(players)
+    tool = GetPlayersFromTeams()
+    result = tool.execute(teams=test_teams, limit_per_team=5)
+    display_players_by_team(result)
 
 
 if __name__ == "__main__":

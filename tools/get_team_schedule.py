@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.game import Game
 from models.schedule import Schedule, TeamSchedule, WeekInfo
-from modules.schedule_utils import get_fantasy_week_boundaries, get_date_range_from_boundaries
+from modules.schedule_utils import get_date_range_from_boundaries, get_fantasy_week_boundaries
 from modules.tool_logger import get_logger
 from tools.base_tool import BaseTool
 
@@ -215,7 +215,8 @@ def main():
     """
     print("Fetching NHL team schedules for the next 2 fantasy weeks (Monday-Sunday)...\n")
 
-    schedule = get_team_schedule(weeks=2)
+    tool = GetTeamSchedule()
+    schedule = tool.execute(weeks=2)
 
     print(f"✓ Successfully fetched schedules for {len(schedule.teams)} teams\n")
     print(f"Period: {schedule.start_date} to {schedule.end_date}\n")

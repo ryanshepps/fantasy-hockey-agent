@@ -15,10 +15,10 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from fantasy_tools import TOOL_FUNCTIONS, TOOLS
+from modules.agent_orchestrator import AgentOrchestrator
 from modules.logger import AgentLogger
 from modules.prefetch_registry import PrefetchRegistry
 from modules.system_prompt_builder import SystemPromptBuilder
-from modules.agent_orchestrator import AgentOrchestrator
 
 # Load environment variables
 load_dotenv()

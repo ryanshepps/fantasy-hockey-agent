@@ -339,7 +339,8 @@ def main():
     print("Testing get_player_stats tool...\n")
 
     # Test with player IDs (you'd need real NHL player IDs)
-    result = get_player_stats(player_ids=[8478402, 8477934])  # Example IDs
+    tool = GetPlayerStats()
+    result = tool.execute(player_ids=[8478402, 8477934])  # Example IDs
 
     if result["success"]:
         print(f"✓ {result['summary']}\n")
