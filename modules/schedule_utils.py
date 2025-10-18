@@ -10,33 +10,54 @@ from models.schedule import Schedule
 
 def get_fantasy_week_boundaries(weeks: int = 2) -> tuple[datetime, datetime, list[tuple[datetime, datetime]]]:
     """
-    Get start/end dates for fantasy weeks (Monday-Sunday).
+    Get start/end dates for fantasy weeks (Monday-Sunday), starting from today.
+
+    This function returns the date range from TODAY through the end of the next N-1
+    fantasy weeks. For example, if weeks=2 and today is Wednesday, it will return:
+    - Week 1: Wednesday (today) through Sunday (end of current fantasy week)
+    - Week 2: Monday through Sunday (next full fantasy week)
 
     Args:
-        weeks: Number of fantasy weeks to look ahead (default 2)
+        weeks: Number of fantasy weeks to include (default 2)
+               Week 1 = rest of current week (today -> Sunday)
+               Week 2+ = full fantasy weeks (Monday -> Sunday)
 
     Returns:
         Tuple of (start_date, end_date, week_boundaries_list)
-        where week_boundaries_list is [(week1_start, week1_end), (week2_start, week2_end), ...]
+        where:
+        - start_date is TODAY
+        - end_date is the Sunday of the (weeks-1)th week from now
+        - week_boundaries_list is [(week1_start, week1_end), (week2_start, week2_end), ...]
 
     Examples:
+        >>> # If today is Wednesday Oct 18, 2025
         >>> start, end, boundaries = get_fantasy_week_boundaries(weeks=2)
         >>> len(boundaries)
         2
-        >>> boundaries[0][0].weekday()  # Monday
-        0
+        >>> boundaries[0][0]  # Today (Wednesday)
+        datetime.datetime(2025, 10, 18, 0, 0)
         >>> boundaries[0][1].weekday()  # Sunday
         6
+        >>> boundaries[1][0].weekday()  # Next Monday
+        0
+        >>> boundaries[1][1].weekday()  # Next Sunday
+        6
     """
-    today = datetime.now()
-    days_since_monday = today.weekday()
-    current_week_monday = today - timedelta(days=days_since_monday)
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    days_until_sunday = 6 - today.weekday()  # 0 = Monday, 6 = Sunday
 
     week_boundaries = []
-    for i in range(weeks):
-        week_start = current_week_monday + timedelta(weeks=i)
-        week_end = week_start + timedelta(days=6)
+
+    # Week 1: Today through end of current fantasy week (Sunday)
+    current_week_end = today + timedelta(days=days_until_sunday)
+    week_boundaries.append((today, current_week_end))
+
+    # Week 2+: Full fantasy weeks (Monday-Sunday)
+    for i in range(1, weeks):
+        week_start = current_week_end + timedelta(days=1)  # Monday after previous Sunday
+        week_end = week_start + timedelta(days=6)  # Sunday
         week_boundaries.append((week_start, week_end))
+        current_week_end = week_end
 
     start_date = week_boundaries[0][0]
     end_date = week_boundaries[-1][1]

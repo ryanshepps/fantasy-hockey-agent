@@ -68,13 +68,13 @@ class GetTeamSchedule(BaseTool):
     # Tool definition for Claude Agent SDK
     TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "get_team_schedule",
-        "description": "Get the number of games each NHL team plays over the next N fantasy weeks (Monday-Sunday). Returns a token-optimized structure with team abbreviations, game counts by week, and game details (date, opponent, home/away). Essential for weekly fantasy matchups as teams with more games = more points. Aligns to fantasy week boundaries (Monday start). Format: {weeks: int, teams: [{abbr: str, total: int, by_week: [int], games: [{date: str, opp: str, h: bool}]}]}",
+        "description": "Get the number of games each NHL team plays starting from TODAY through the end of the next N-1 fantasy weeks (Monday-Sunday). Returns a token-optimized structure with team abbreviations, game counts by week, and game details (date, opponent, home/away). Essential for weekly fantasy matchups as teams with more games = more points. Week 1 = rest of current week (today -> Sunday), Week 2+ = full weeks. Format: {weeks: int, teams: [{abbr: str, total: int, by_week: [int], games: [{date: str, opp: str, h: bool}]}]}",
         "input_schema": {
             "type": "object",
             "properties": {
                 "weeks": {
                     "type": "integer",
-                    "description": "Number of fantasy weeks to look ahead (default 2, which covers the current fantasy week and next fantasy week). Fantasy weeks run Monday-Sunday.",
+                    "description": "Number of fantasy weeks to include (default 2). Week 1 covers today through end of current fantasy week (Sunday), Week 2+ covers full fantasy weeks (Monday-Sunday). This ensures recommendations only consider games in the future.",
                     "default": 2,
                 }
             },
@@ -85,14 +85,15 @@ class GetTeamSchedule(BaseTool):
     @classmethod
     def run(cls, weeks: int = 2) -> Schedule:
         """
-        Get number of games each NHL team plays over specified fantasy weeks.
+        Get number of games each NHL team plays starting from today through specified fantasy weeks.
 
         Args:
-            weeks: Number of fantasy weeks to look ahead (default 2)
-                   Fantasy weeks run Monday-Sunday
+            weeks: Number of fantasy weeks to include (default 2)
+                   Week 1 = rest of current week (today -> Sunday)
+                   Week 2+ = full fantasy weeks (Monday -> Sunday)
 
         Returns:
-            Schedule object with validated TeamSchedule models
+            Schedule object with validated TeamSchedule models, starting from today's date
 
         Raises:
             Exception: If NHL API is not available or fetch fails
@@ -126,7 +127,7 @@ class GetTeamSchedule(BaseTool):
         )
 
         logger.info(
-            f"Fetching NHL schedules from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (fantasy weeks: Monday-Sunday)"
+            f"Fetching NHL schedules from {start_date.strftime('%Y-%m-%d')} (today) to {end_date.strftime('%Y-%m-%d')} (fantasy weeks: Monday-Sunday)"
         )
 
         # Fetch schedule for each date
