@@ -3,7 +3,7 @@
 from enum import Enum
 from typing import ClassVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PlayerPosition(str, Enum):
@@ -110,6 +110,15 @@ class Player(BaseModel):
         default=None,
         description="Quality assessment (populated when needed for drop decisions)",
     )
+
+    @field_validator("quality_assessment", mode="before")
+    @classmethod
+    def validate_quality_assessment(cls, value):
+        """Handle quality_assessment being passed as a string (ignore it)."""
+        if isinstance(value, str):
+            # Agent passed a string instead of PlayerQuality object - ignore it
+            return None
+        return value
 
     class Config:
         json_schema_extra: ClassVar = {

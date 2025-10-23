@@ -243,18 +243,18 @@ class FindStreamingMatches(BaseTool):
 
     TOOL_DEFINITION: ClassVar[dict[str, Any]] = {
         "name": "find_streaming_matches",
-        "description": "Calculate optimal drop/pickup timing to maximize games played. For each droppable player and available free agent, determines exact date to drop/pickup and total games gained. Returns recommendations sorted by improvement. Example output: 'Drop Vatrano on Oct 15 after 3 games, pickup Lafreniere with 4 games remaining = +3 games total'.",
+        "description": "Calculate optimal drop/pickup timing to maximize games played. For each droppable player and available free agent, determines exact date to drop/pickup and total games gained. Returns recommendations sorted by improvement. Example output: 'Drop Vatrano on Oct 15 after 3 games, pickup Lafreniere with 4 games remaining = +3 games total'. Note: When passing players, only core fields are used (player_id, name, position, eligible_positions, nhl_team, fantasy_points, status). quality_assessment is optional and ignored by this tool.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "droppable_players": {
                     "type": "array",
-                    "description": "List of droppable Player models from assess_droppable_players tool",
+                    "description": "List of droppable Player models from assess_droppable_players tool. Core fields are used (player_id, name, position, eligible_positions, nhl_team, fantasy_points); quality_assessment, if present, is ignored.",
                     "items": {"type": "object"},
                 },
                 "available_players": {
                     "type": "array",
-                    "description": "List of available free agent Player models from get_players_from_teams tool",
+                    "description": "List of available free agent Player models from get_players_from_teams tool. Only include core player fields.",
                     "items": {"type": "object"},
                 },
                 "schedule": {

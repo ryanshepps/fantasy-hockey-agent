@@ -14,6 +14,7 @@ from pydantic import TypeAdapter
 from models.player import Player, PlayerPosition, PlayerQuality, PlayerTier
 from models.roster import Roster
 from models.schedule import Schedule
+from modules.nhl_player_mapper import get_nhl_player_id, get_player_games_played
 from modules.player_utils import get_player_team_abbr
 from tools.base_tool import BaseTool
 
@@ -38,8 +39,8 @@ def _assess_player_quality(
 
     Args:
         player: Player model with stats
-        schedule: Schedule model to calculate games played
-        current_date: Current date string (YYYY-MM-DD) for calculating games played
+        schedule: Schedule model (unused, kept for backwards compatibility)
+        current_date: Current date string (unused, kept for backwards compatibility)
 
     Returns:
         PlayerQuality model with quality metrics
@@ -47,28 +48,28 @@ def _assess_player_quality(
     # Extract fantasy points from player
     fantasy_points = player.fantasy_points
 
-    # Calculate games played from team schedule
-    games_played = 0
-    if schedule and current_date:
-        team_abbr = get_player_team_abbr(player)
-        if team_abbr:
-            team_schedule = schedule.get_team_schedule(team_abbr)
-            if team_schedule:
-                # Count games before or on current date
-                for game in team_schedule.games:
-                    if game.date <= current_date:
-                        games_played += 1
+    # Get games played from NHL API using cached player ID mapping
+    games_played = None
+    team_abbr = get_player_team_abbr(player)
+    is_goalie = player.position == PlayerPosition.GOALIE
 
-    # If we couldn't calculate games played, estimate 5 (early season default)
-    if games_played == 0:
-        games_played = 5
+    if player.player_id and team_abbr:
+        # Get NHL player ID (from cache or NHL API)
+        nhl_id = get_nhl_player_id(player.player_id, player.name, team_abbr)
+
+        if nhl_id:
+            # Fetch games played/started from NHL API
+            games_played = get_player_games_played(nhl_id, is_goalie)
+
+    # If we couldn't get games played from NHL API, default to 0 (player will be marked as low-quality)
+    if games_played is None:
+        logger.warning(f"Could not determine games played for {player.name}, defaulting to 0")
+        games_played = 0
 
     # Calculate per-game metrics
     fantasy_ppg = fantasy_points / games_played if games_played > 0 else 0
 
     # Tier classification based on position
-    is_goalie = player.position == PlayerPosition.GOALIE
-
     if is_goalie:
         # Goalies - different thresholds
         if fantasy_ppg >= 6.0:
@@ -80,12 +81,12 @@ def _assess_player_quality(
         else:
             tier = PlayerTier.STREAMABLE
     else:
-        # Skaters
-        if fantasy_ppg >= 4.5:
+        # Skaters - adjusted thresholds to avoid false elites
+        if fantasy_ppg >= 6.0:
             tier = PlayerTier.ELITE
-        elif fantasy_ppg >= 3.5:
+        elif fantasy_ppg >= 4.75:
             tier = PlayerTier.HIGH_END
-        elif fantasy_ppg >= 2.5:
+        elif fantasy_ppg >= 3.5:
             tier = PlayerTier.MID_TIER
         else:
             tier = PlayerTier.STREAMABLE
