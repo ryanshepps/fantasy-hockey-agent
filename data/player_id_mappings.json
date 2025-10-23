@@ -151,10 +151,26 @@
       "nhl_team": "NYR",
       "last_verified": "2025-10-22",
       "source": "auto"
+    },
+    "30680": {
+      "yahoo_id": "30680",
+      "nhl_id": 8484471,
+      "player_name": "Emmitt Finnie",
+      "nhl_team": "DET",
+      "last_verified": "2025-10-23",
+      "source": "auto"
+    },
+    "6765": {
+      "yahoo_id": "6765",
+      "nhl_id": 8478444,
+      "player_name": "Brock Boeser",
+      "nhl_team": "VAN",
+      "last_verified": "2025-10-23",
+      "source": "auto"
     }
   },
   "metadata": {
     "version": "1.0",
-    "last_updated": "2025-10-22T10:04:56.810385"
+    "last_updated": "2025-10-23T07:25:41.213725"
   }
 }
