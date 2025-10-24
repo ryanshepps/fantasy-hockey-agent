@@ -167,10 +167,18 @@
       "nhl_team": "VAN",
       "last_verified": "2025-10-23",
       "source": "auto"
+    },
+    "5254": {
+      "yahoo_id": "5254",
+      "nhl_id": 8475200,
+      "player_name": "Dmitry Orlov",
+      "nhl_team": "SJS",
+      "last_verified": "2025-10-24",
+      "source": "auto"
     }
   },
   "metadata": {
     "version": "1.0",
-    "last_updated": "2025-10-23T07:25:41.213725"
+    "last_updated": "2025-10-24T15:08:20.414673"
   }
 }
