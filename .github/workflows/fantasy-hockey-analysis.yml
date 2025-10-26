@@ -43,16 +43,16 @@ jobs:
           YAHOO_CLIENT_ID=${{ secrets.YAHOO_CLIENT_ID }}
           YAHOO_CLIENT_SECRET=${{ secrets.YAHOO_CLIENT_SECRET }}
           YAHOO_ACCESS_TOKEN_JSON='${{ secrets.YAHOO_ACCESS_TOKEN_JSON }}'
-          LEAGUE_ID=${{ secrets.LEAGUE_ID }}
-          TEAM_ID=${{ secrets.TEAM_ID }}
-          GAME_KEY=${{ secrets.GAME_KEY }}
+          LEAGUE_ID=${{ vars.LEAGUE_ID }}
+          TEAM_ID=${{ vars.TEAM_ID }}
+          GAME_KEY=${{ vars.GAME_KEY }}
           ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
           EMAIL_FROM=${{ secrets.EMAIL_FROM }}
           EMAIL_TO=${{ secrets.EMAIL_TO }}
           EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}
-          SMTP_SERVER=${{ secrets.SMTP_SERVER }}
+          SMTP_SERVER=${{ vars.SMTP_SERVER }}
           SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
-          SMTP_PORT=${{ secrets.SMTP_PORT }}
+          SMTP_PORT=${{ vars.SMTP_PORT }}
           EOF
 
       - name: Run Fantasy Hockey Agent
