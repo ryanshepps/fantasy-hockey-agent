@@ -175,10 +175,18 @@
       "nhl_team": "SJS",
       "last_verified": "2025-10-24",
       "source": "auto"
+    },
+    "6055": {
+      "yahoo_id": "6055",
+      "nhl_id": 8477402,
+      "player_name": "Pavel Buchnevich",
+      "nhl_team": "STL",
+      "last_verified": "2025-10-27",
+      "source": "auto"
     }
   },
   "metadata": {
     "version": "1.0",
-    "last_updated": "2025-10-24T15:08:20.414673"
+    "last_updated": "2025-10-27T07:24:43.210011"
   }
 }
