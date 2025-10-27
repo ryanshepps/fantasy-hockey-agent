@@ -8,11 +8,9 @@ for player statistics, particularly games played for PPG calculations.
 
 try:
     from modules.logger import AgentLogger
-
     logger = AgentLogger.get_logger(__name__)
 except ImportError:
     import logging
-
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
@@ -58,20 +56,20 @@ def get_player_stats_from_yahoo(player, is_goalie: bool) -> dict[str, float] | N
         Dictionary with stat_id -> value mappings, or None if no stats available
         Example: {0: 10.0, 1: 5.0, 2: 8.0} for games_played, goals, assists
     """
-    if not hasattr(player, "player_stats") or not player.player_stats:
+    if not hasattr(player, 'player_stats') or not player.player_stats:
         return None
 
     stats_dict = {}
 
     # Yahoo API structure: player.player_stats.stats is a list of stat objects
     # Each stat object has: stat_id, value
-    if hasattr(player.player_stats, "stats") and player.player_stats.stats:
+    if hasattr(player.player_stats, 'stats') and player.player_stats.stats:
         stats_list = player.player_stats.stats
 
         # Handle both list and dict formats
         if isinstance(stats_list, list):
             for stat in stats_list:
-                if hasattr(stat, "stat_id") and hasattr(stat, "value"):
+                if hasattr(stat, 'stat_id') and hasattr(stat, 'value'):
                     stat_id = int(stat.stat_id)
                     value = parse_stat_value(stat.value)
                     stats_dict[stat_id] = value
