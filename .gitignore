@@ -31,3 +31,7 @@ logs/
 
 # Git Worktrees
 .worktrees/
+
+# Vector Database
+data/vector_db/
+test_data/vector_db/
