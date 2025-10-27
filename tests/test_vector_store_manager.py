@@ -1,4 +1,3 @@
-import pytest
 from indexing.vector_store_manager import VectorStoreManager
 
 

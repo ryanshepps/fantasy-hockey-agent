@@ -1,9 +1,7 @@
 import json
-import os
 import tempfile
 from pathlib import Path
 
-import pytest
 from indexing.data_ingestion import DataIngestionPipeline
 from indexing.vector_store_manager import VectorStoreManager
 

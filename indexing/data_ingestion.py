@@ -2,7 +2,6 @@
 
 import logging
 import os
-from pathlib import Path
 
 from llama_index.core import VectorStoreIndex
 from llama_index.embeddings.openai import OpenAIEmbedding

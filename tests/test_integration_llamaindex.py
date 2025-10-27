@@ -1,10 +1,10 @@
 """Integration test for LlamaIndex multi-agent system."""
 
-import asyncio
 import os
 import tempfile
 
 import pytest
+
 from agents.master_orchestrator import MasterOrchestrator
 from indexing.data_ingestion import DataIngestionPipeline
 from indexing.vector_store_manager import VectorStoreManager

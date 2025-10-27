@@ -1,4 +1,3 @@
-import pytest
 from agents.strategy_planner_agent import StrategyPlannerAgent
 from indexing.vector_store_manager import VectorStoreManager
 

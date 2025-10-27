@@ -1,4 +1,3 @@
-import pytest
 from agents.historical_analyst_agent import HistoricalAnalystAgent
 from indexing.vector_store_manager import VectorStoreManager
 

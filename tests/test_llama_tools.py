@@ -1,5 +1,5 @@
-import pytest
 from llama_index.core.tools import BaseTool
+
 from tools.llama_tools import GetCurrentRosterTool, GetTeamScheduleTool
 
 

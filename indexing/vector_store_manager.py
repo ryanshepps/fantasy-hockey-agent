@@ -6,7 +6,6 @@ from typing import Any
 
 import chromadb
 from chromadb.config import Settings
-from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 logger = logging.getLogger(__name__)

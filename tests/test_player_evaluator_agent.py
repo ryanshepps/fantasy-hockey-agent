@@ -1,4 +1,3 @@
-import pytest
 from agents.player_evaluator_agent import PlayerEvaluatorAgent
 from indexing.vector_store_manager import VectorStoreManager
 

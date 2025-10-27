@@ -2,9 +2,9 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-from indexing.document_loaders import RecommendationHistoryLoader
 from llama_index.core import Document
+
+from indexing.document_loaders import RecommendationHistoryLoader
 
 
 def test_recommendation_history_loader():

@@ -94,7 +94,8 @@ class MasterOrchestrator:
             player_eval_tool,
             strategy_tool,
             historical_tool,
-        ] + operational_tools
+            *operational_tools,
+        ]
 
         system_prompt = """You are the master fantasy hockey analyst coordinating specialized sub-agents.
 
