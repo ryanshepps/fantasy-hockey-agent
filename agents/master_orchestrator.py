@@ -121,7 +121,7 @@ Make decisions based on their combined insights."""
         logger.info("Created MasterOrchestrator with 3 sub-agents")
         return agent
 
-    def run(self, prompt: str) -> str:
+    async def run(self, prompt: str) -> str:
         """
         Run the master orchestrator.
 
@@ -132,6 +132,6 @@ Make decisions based on their combined insights."""
             Final response
         """
         logger.info("Master orchestrator starting analysis...")
-        response = self.agent.run(prompt)
+        response = await self.agent.run(prompt)
         logger.info("Master orchestrator completed")
         return str(response)

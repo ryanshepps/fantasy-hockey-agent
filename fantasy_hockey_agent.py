@@ -51,6 +51,8 @@ def run_llamaindex_agent(
     Returns:
         Final response from master orchestrator
     """
+    import asyncio
+
     from agents.master_orchestrator import MasterOrchestrator
     from indexing.data_ingestion import DataIngestionPipeline
     from indexing.vector_store_manager import VectorStoreManager
@@ -73,8 +75,8 @@ def run_llamaindex_agent(
         dry_run=dry_run,
     )
 
-    # Run
-    return orchestrator.run(prompt)
+    # Run (async)
+    return asyncio.run(orchestrator.run(prompt))
 
 
 def setup_prefetch_registry() -> PrefetchRegistry:
