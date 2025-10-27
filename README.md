@@ -130,6 +130,20 @@ uv run python fantasy_hockey_agent.py --skip-prefetch
 uv run python fantasy_hockey_agent.py --dry-run
 ```
 
+## LlamaIndex Multi-Agent Mode (Experimental)
+
+Run with enhanced reasoning via specialized sub-agents:
+
+```bash
+python3 fantasy_hockey_agent.py --use-llamaindex
+```
+
+See [LlamaIndex Usage Guide](docs/llamaindex-usage.md) for details.
+
+**Requirements:**
+- `OPENAI_API_KEY` for embeddings
+- Additional ~5-10s latency for vector indexing
+
 ## Contributing
 
 This is a personal project, but feel free to fork and customize for your needs!
