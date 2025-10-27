@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.league import LeagueContext
 from models.player import Player, PlayerPosition, PlayerStatus, RosterSlot
 from models.roster import Roster, RosterCounts
+from modules.yahoo_stats_fetcher import get_games_played_from_yahoo
 from modules.yahoo_utils import (
     LEAGUE_ID,
     TEAM_ID,
@@ -84,6 +85,10 @@ def _convert_roster_to_players(roster: list) -> list[Player]:
         status = _parse_status(status_str)
         is_injured = status != PlayerStatus.HEALTHY
 
+        # Extract games played from Yahoo player stats
+        is_goalie = position == PlayerPosition.GOALIE
+        games_played = get_games_played_from_yahoo(player, is_goalie) or 0
+
         player_model = Player(
             player_id=str(player.player_id) if hasattr(player, "player_id") else None,
             name=player_name,
@@ -92,6 +97,7 @@ def _convert_roster_to_players(roster: list) -> list[Player]:
             selected_position=selected_position,
             nhl_team=player.editorial_team_abbr if hasattr(player, "editorial_team_abbr") else None,
             fantasy_points=fantasy_points,
+            games_played=games_played,
             status=status,
             is_injured=is_injured,
         )

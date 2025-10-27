@@ -14,8 +14,6 @@ from pydantic import TypeAdapter
 from models.player import Player, PlayerPosition, PlayerQuality, PlayerTier
 from models.roster import Roster
 from models.schedule import Schedule
-from modules.nhl_player_mapper import get_nhl_player_id, get_player_games_played
-from modules.player_utils import get_player_team_abbr
 from tools.base_tool import BaseTool
 
 try:
@@ -35,7 +33,8 @@ def _assess_player_quality(
     """
     Assess player quality to determine if they should be considered droppable.
 
-    Uses fantasy points per game and position to classify players into tiers.
+    Uses Yahoo Fantasy API as the source of truth for both fantasy points
+    and games played to calculate accurate PPG metrics.
 
     Args:
         player: Player model with stats
@@ -45,26 +44,10 @@ def _assess_player_quality(
     Returns:
         PlayerQuality model with quality metrics
     """
-    # Extract fantasy points from player
+    # Extract fantasy points and games played from player (both from Yahoo API)
     fantasy_points = player.fantasy_points
-
-    # Get games played from NHL API using cached player ID mapping
-    games_played = None
-    team_abbr = get_player_team_abbr(player)
+    games_played = player.games_played
     is_goalie = player.position == PlayerPosition.GOALIE
-
-    if player.player_id and team_abbr:
-        # Get NHL player ID (from cache or NHL API)
-        nhl_id = get_nhl_player_id(player.player_id, player.name, team_abbr)
-
-        if nhl_id:
-            # Fetch games played/started from NHL API
-            games_played = get_player_games_played(nhl_id, is_goalie)
-
-    # If we couldn't get games played from NHL API, default to 0 (player will be marked as low-quality)
-    if games_played is None:
-        logger.warning(f"Could not determine games played for {player.name}, defaulting to 0")
-        games_played = 0
 
     # Calculate per-game metrics
     fantasy_ppg = fantasy_points / games_played if games_played > 0 else 0
