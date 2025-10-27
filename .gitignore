@@ -29,5 +29,5 @@ logs/
 # Ruff
 .ruff_cache/
 
-# Git worktrees
+# Git Worktrees
 .worktrees/
