@@ -98,6 +98,10 @@ class Player(BaseModel):
         default=0.0,
         description="Total fantasy points accumulated this season (can be negative for goalies)",
     )
+    games_played: int = Field(
+        default=0,
+        description="Games played this season (from Yahoo API stat_id 0 for skaters, 18 for goalies)",
+    )
     status: PlayerStatus = Field(
         default=PlayerStatus.HEALTHY,
         description="Current injury/availability status",

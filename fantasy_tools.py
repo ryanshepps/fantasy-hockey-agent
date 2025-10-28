@@ -12,8 +12,6 @@ from tools.assess_droppable_players import TOOL_DEFINITION as ASSESS_DROPPABLE_D
 from tools.assess_droppable_players import assess_droppable_players
 from tools.find_streaming_matches import TOOL_DEFINITION as FIND_STREAMING_DEF
 from tools.find_streaming_matches import find_streaming_matches
-from tools.get_player_stats import TOOL_DEFINITION as GET_PLAYER_STATS_DEF
-from tools.get_player_stats import get_player_stats
 from tools.get_players_from_teams import TOOL_DEFINITION as GET_PLAYERS_FROM_TEAMS_DEF
 from tools.get_players_from_teams import get_players_from_teams
 from tools.get_recommendation_history import TOOL_DEFINITION as GET_RECOMMENDATION_HISTORY_DEF
@@ -36,7 +34,6 @@ TOOLS = [
     GET_PLAYERS_FROM_TEAMS_DEF,
     ASSESS_DROPPABLE_DEF,
     FIND_STREAMING_DEF,
-    GET_PLAYER_STATS_DEF,
     SEND_EMAIL_DEF,
     SAVE_RECOMMENDATIONS_DEF,
 ]
@@ -49,7 +46,6 @@ TOOL_FUNCTIONS = {
     "get_players_from_teams": get_players_from_teams,
     "assess_droppable_players": assess_droppable_players,
     "find_streaming_matches": find_streaming_matches,
-    "get_player_stats": get_player_stats,
     "send_email": send_email,
     "save_recommendations": save_recommendations,
     "get_recommendation_history": get_recommendation_history,
