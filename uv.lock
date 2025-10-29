@@ -145,7 +145,7 @@ wheels = [
 ]
 
 [[package]]
-name = "fantasy-hockey-test"
+name = "fantasy-hockey-agent"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
