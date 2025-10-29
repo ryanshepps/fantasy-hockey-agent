@@ -58,9 +58,9 @@ jobs:
       - name: Run Fantasy Hockey Agent
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            python fantasy_hockey_agent.py --dry-run
+            uv run fantasy_hockey_agent.py --dry-run
           else
-            python fantasy_hockey_agent.py
+            uv run fantasy_hockey_agent.py
           fi
 
       - name: Commit and push changes
