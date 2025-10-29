@@ -88,11 +88,8 @@ Mailtrap captures emails without sending them - perfect for testing:
 Install all required packages:
 
 ```bash
-# Activate virtual environment (if not already)
-source venv/bin/activate
-
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 ```
 
 ### 7. First-Time Authentication
@@ -100,11 +97,8 @@ pip install -r requirements.txt
 Both scripts require Yahoo OAuth authentication:
 
 ```bash
-# Activate virtual environment (if not already activated)
-source venv/bin/activate
-
 # Run either script for first-time authentication
-python get_available_players.py
+uv run python get_available_players.py
 ```
 
 **First Run**: The first time you run the script, it will:
@@ -119,24 +113,21 @@ python get_available_players.py
 ### Running the Agent
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate
-
 # Run the agent
-python fantasy_hockey_agent.py
+uv run python fantasy_hockey_agent.py
 ```
 
 
 ### CLI Flags:
 ```bash
 # Default: prefetch enabled
-python fantasy_hockey_agent.py
+uv run python fantasy_hockey_agent.py
 
 # Disable prefetch (Uses cached data -- useful for testing)
-python fantasy_hockey_agent.py --skip-prefetch
+uv run python fantasy_hockey_agent.py --skip-prefetch
 
 # Do a dry run (Does not make any WRITE operations like sending email or saving recommendations)
-python fantasy_hockey_agent.py --dry-run
+uv run python fantasy_hockey_agent.py --dry-run
 ```
 
 ## Contributing
