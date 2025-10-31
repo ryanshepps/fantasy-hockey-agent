@@ -36,7 +36,6 @@ class AgentOrchestrator:
         initial_prompt: str,
         model: str = "claude-sonnet-4-20250514",
         dry_run: bool = False,
-        verbose: bool = True,
     ):
         """
         Initialize orchestrator.
@@ -49,14 +48,12 @@ class AgentOrchestrator:
             initial_prompt: Initial user prompt
             model: Model to use
             dry_run: If True, skip side-effect tools
-            verbose: If True, log detailed info
         """
         self.client = client
         self.system_blocks = system_blocks
         self.tools = self._prepare_cached_tools(tools)
         self.model = model
         self.dry_run = dry_run
-        self.verbose = verbose
 
         self.rate_limiter = RateLimiter()
         self.message_handler = MessageHandler(initial_prompt)
@@ -87,9 +84,8 @@ class AgentOrchestrator:
         Returns:
             Final text response from Claude
         """
-        if self.verbose:
-            mode = "DRY-RUN MODE" if self.dry_run else ""
-            logger.info(f"Starting Fantasy Hockey Agent {mode}".strip())
+        mode = "DRY-RUN MODE" if self.dry_run else ""
+        logger.info(f"Starting Fantasy Hockey Agent {mode}".strip())
 
         while True:
             self.api_call_count += 1
@@ -123,14 +119,13 @@ class AgentOrchestrator:
                 # Update rate limiter
                 self.rate_limiter.record_usage(getattr(usage, "input_tokens", 0))
 
-            if self.verbose:
-                logger.info(f"Stop reason: {response.stop_reason}")
+            logger.info(f"Stop reason: {response.stop_reason}")
 
             # Extract content blocks
             assistant_content = []
             for block in response.content:
                 if block.type in ["text", "tool_use"]:
-                    if block.type == "tool_use" and self.verbose:
+                    if block.type == "tool_use":
                         logger.info(f"Tool: {block.name}")
                     assistant_content.append(block)
 
