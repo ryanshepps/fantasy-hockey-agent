@@ -35,6 +35,50 @@ AgentLogger.set_library_log_level("yfpy", logging.WARNING)
 AgentLogger.set_library_log_level("urllib3", logging.WARNING)
 
 
+def run_llamaindex_agent(
+    prompt: str,
+    verbose: bool = True,
+    dry_run: bool = False,
+) -> str:
+    """
+    Run the fantasy hockey agent using LlamaIndex multi-agent architecture.
+
+    Args:
+        prompt: Initial prompt for the agent
+        verbose: Print conversation details
+        dry_run: If True, skip sending emails
+
+    Returns:
+        Final response from master orchestrator
+    """
+    import asyncio
+
+    from agents.master_orchestrator import MasterOrchestrator
+    from indexing.data_ingestion import DataIngestionPipeline
+    from indexing.vector_store_manager import VectorStoreManager
+
+    # Setup vector store
+    vector_manager = VectorStoreManager(persist_dir="./data/vector_db")
+
+    # Ingest data
+    if verbose:
+        logger.info("Setting up vector indexes...")
+    pipeline = DataIngestionPipeline(
+        vector_manager=vector_manager,
+        recommendations_path="recommendations_history.json",
+    )
+    pipeline.setup_indexes()
+
+    # Create orchestrator
+    orchestrator = MasterOrchestrator(
+        vector_manager=vector_manager,
+        dry_run=dry_run,
+    )
+
+    # Run (async)
+    return asyncio.run(orchestrator.run(prompt))
+
+
 def setup_prefetch_registry() -> PrefetchRegistry:
     """
     Configure which tools can be prefetched.
@@ -216,6 +260,11 @@ def main():
         action="store_true",
         help="Skip pre-fetching static data (use tools instead, useful for testing)",
     )
+    parser.add_argument(
+        "--use-llamaindex",
+        action="store_true",
+        help="Use LlamaIndex multi-agent architecture (experimental)",
+    )
     args = parser.parse_args()
 
     if not os.getenv("ANTHROPIC_API_KEY"):
@@ -223,31 +272,38 @@ def main():
         logger.error("Please add it to your .env file")
         return
 
-    # Setup prefetch registry
-    prefetch_registry = setup_prefetch_registry()
-
-    # Pre-fetch static data unless skipped
-    prefetch_data = None
-    if not args.skip_prefetch:
-        try:
-            prefetch_data = prefetch_static_data(prefetch_registry)
-            logger.info("Pre-fetch successful - data will be cached in system prompt")
-        except Exception as e:
-            logger.warning(f"Pre-fetch failed: {e}")
-            logger.warning("Falling back to tool-based fetching")
-
     prompt = "Please proceed with the analysis and send me the email."
 
     mode_msg = " (DRY-RUN)" if args.dry_run else ""
-    logger.info(f"Starting Fantasy Hockey Analysis{mode_msg}...")
 
-    result = run_agent(
-        prompt,
-        prefetch_registry=prefetch_registry,
-        prefetch_data=prefetch_data,
-        verbose=True,
-        dry_run=args.dry_run,
-    )
+    # Use LlamaIndex if flag set
+    if args.use_llamaindex:
+        logger.info(f"Starting Fantasy Hockey Analysis with LlamaIndex{mode_msg}...")
+        result = run_llamaindex_agent(
+            prompt,
+            verbose=True,
+            dry_run=args.dry_run,
+        )
+    else:
+        # Existing prefetch logic
+        prefetch_registry = setup_prefetch_registry()
+        prefetch_data = None
+        if not args.skip_prefetch:
+            try:
+                prefetch_data = prefetch_static_data(prefetch_registry)
+                logger.info("Pre-fetch successful - data will be cached in system prompt")
+            except Exception as e:
+                logger.warning(f"Pre-fetch failed: {e}")
+                logger.warning("Falling back to tool-based fetching")
+
+        logger.info(f"Starting Fantasy Hockey Analysis{mode_msg}...")
+        result = run_agent(
+            prompt,
+            prefetch_registry=prefetch_registry,
+            prefetch_data=prefetch_data,
+            verbose=True,
+            dry_run=args.dry_run,
+        )
 
     logger.info("Analysis complete!")
     logger.info(result)
